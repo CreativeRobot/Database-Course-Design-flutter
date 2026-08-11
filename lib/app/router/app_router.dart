@@ -1,66 +1,97 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/books',
-  routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const _ScaffoldPage(
-        title: '登录',
-        message: '登录页面将在 auth 功能模块中实现。',
-      ),
-    ),
-    GoRoute(
-      path: '/books',
-      builder: (context, state) => const _ScaffoldPage(
-        title: '图书',
-        message: '图书列表将在 books 功能模块中实现。',
-      ),
-    ),
-    GoRoute(
-      path: '/cart',
-      builder: (context, state) => const _ScaffoldPage(
-        title: '购物车',
-        message: '购物车将在 cart 功能模块中实现。',
-      ),
-    ),
-    GoRoute(
-      path: '/orders',
-      builder: (context, state) => const _ScaffoldPage(
-        title: '我的订单',
-        message: '订单页面将在 orders 功能模块中实现。',
-      ),
-    ),
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) => const _ScaffoldPage(
-        title: '个人中心',
-        message: '用户资料和地址将在 profile 功能模块中实现。',
-      ),
-    ),
-  ],
-);
+import '../../features/auth/presentation/auth_controller.dart';
+import '../../features/auth/presentation/auth_pages.dart';
+import '../../features/books/presentation/books_page.dart';
 
-class _ScaffoldPage extends StatelessWidget {
-  const _ScaffoldPage({
-    required this.title,
-    required this.message,
-  });
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final refresh = _AuthRouterRefresh(ref);
+  ref.onDispose(refresh.dispose);
 
-  final String title;
-  final String message;
+  return GoRouter(
+    initialLocation: '/login',
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
+      if (authState.status == AuthStatus.checking ||
+          authState.status == AuthStatus.loading) {
+        return null;
+      }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(message, textAlign: TextAlign.center),
+      final isAuthPage =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register';
+      final isProtectedPage = const {
+        '/cart',
+        '/orders',
+        '/profile',
+      }.contains(state.matchedLocation);
+
+      if (authState.isAuthenticated && isAuthPage) {
+        return '/books';
+      }
+      if (!authState.isAuthenticated && isProtectedPage) {
+        return '/login';
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(path: '/books', builder: (context, state) => const BooksPage()),
+      GoRoute(
+        path: '/books/:bookId',
+        builder: (context, state) {
+          final bookId = int.tryParse(state.pathParameters['bookId'] ?? '');
+          if (bookId == null) {
+            return const BooksPage();
+          }
+          return BookDetailPage(bookId: bookId);
+        },
+      ),
+      GoRoute(
+        path: '/cart',
+        builder: (context, state) => const ProtectedPlaceholderPage(
+          title: '购物车',
+          message: '购物车模块将在认证闭环之后接入。当前登录状态已经可以保护这条路由。',
         ),
       ),
+      GoRoute(
+        path: '/orders',
+        builder: (context, state) => const ProtectedPlaceholderPage(
+          title: '我的订单',
+          message: '订单模块将在购物车完成后接入。当前登录状态已经可以保护这条路由。',
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProtectedPlaceholderPage(
+          title: '个人中心',
+          message: '用户资料和收货地址模块将在下一阶段接入。',
+        ),
+      ),
+    ],
+  );
+});
+
+class _AuthRouterRefresh extends ChangeNotifier {
+  _AuthRouterRefresh(Ref ref) {
+    _subscription = ref.listen<AuthState>(
+      authControllerProvider,
+      (_, __) => notifyListeners(),
     );
+  }
+
+  late final ProviderSubscription<AuthState> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.close();
+    super.dispose();
   }
 }

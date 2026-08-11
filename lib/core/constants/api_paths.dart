@@ -6,6 +6,8 @@ abstract final class ApiPaths {
   static const categories = '/api/categories';
   static const authors = '/api/authors';
   static const publishers = '/api/publishers';
+  static String book(int bookId) => '$books/$bookId';
+  static String bookReviews(int bookId) => '$books/$bookId/reviews';
 
   static const me = '/api/user/me';
   static const addresses = '/api/user/addresses';
