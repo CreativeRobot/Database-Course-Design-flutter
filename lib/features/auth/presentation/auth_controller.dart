@@ -132,6 +132,22 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState.unauthenticated();
   }
 
+  Future<void> updateNickname(String nickname) async {
+    final session = state.session;
+    if (session == null) {
+      return;
+    }
+    final updatedSession = AuthSession(
+      id: session.id,
+      username: session.username,
+      nickname: nickname,
+      role: session.role,
+      token: session.token,
+    );
+    await _tokenStorage.saveSession(updatedSession);
+    state = AuthState.authenticated(updatedSession);
+  }
+
   Future<bool> _runAuth(Future<AuthSession> Function() action) async {
     state = AuthState.loading(session: state.session);
     try {

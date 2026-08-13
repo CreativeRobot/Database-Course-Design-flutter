@@ -1,0 +1,645 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../cart/presentation/commerce_widgets.dart';
+import '../data/order_models.dart';
+import 'orders_controller.dart';
+
+class OrdersPage extends ConsumerStatefulWidget {
+  const OrdersPage({super.key});
+
+  @override
+  ConsumerState<OrdersPage> createState() => _OrdersPageState();
+}
+
+class _OrdersPageState extends ConsumerState<OrdersPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(
+      () => ref.read(ordersControllerProvider.notifier).loadOrders(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(ordersControllerProvider);
+    final controller = ref.read(ordersControllerProvider.notifier);
+
+    return Scaffold(
+      backgroundColor: CommerceColors.canvas,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const CommerceHeader(current: 'orders'),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => controller.loadOrders(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 36, 20, 64),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CommerceTitle(
+                            eyebrow: 'ORDERS  ·  我的订单',
+                            title: '每一本，都有去向',
+                            subtitle: '查看订单进度，并处理待支付或可取消的订单。',
+                            trailing: OutlinedButton.icon(
+                              onPressed: () => context.go('/books'),
+                              icon: const Icon(
+                                Icons.menu_book_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('继续选书'),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          _OrderFilters(
+                            selected: state.filter,
+                            disabled: state.status == OrdersStatus.loading,
+                            onSelected: (status) => controller.loadOrders(
+                              status: status,
+                              clearFilter: status == null,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (state.errorMessage != null) ...[
+                            CommerceNotice(message: state.errorMessage!),
+                            const SizedBox(height: 18),
+                          ],
+                          if (state.status == OrdersStatus.loading &&
+                              state.orders.isEmpty)
+                            const _OrdersLoading()
+                          else if (state.status == OrdersStatus.failure &&
+                              state.orders.isEmpty)
+                            _OrdersFailure(
+                              onRetry: () => controller.loadOrders(),
+                            )
+                          else if (state.orders.isEmpty)
+                            _OrdersEmpty(
+                              filtered: state.filter != null,
+                              onBrowse: () => context.go('/books'),
+                            )
+                          else
+                            Column(
+                              children: [
+                                for (
+                                  var index = 0;
+                                  index < state.orders.length;
+                                  index++
+                                ) ...[
+                                  _OrderCard(
+                                    order: state.orders[index],
+                                    busy:
+                                        state.busyOrderId ==
+                                        state.orders[index].id,
+                                    onPay: () =>
+                                        _confirmPay(state.orders[index]),
+                                    onCancel: () =>
+                                        _confirmCancel(state.orders[index]),
+                                  ),
+                                  if (index != state.orders.length - 1)
+                                    const SizedBox(height: 14),
+                                ],
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmPay(BookOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('模拟支付'),
+        content: Text(
+          '将使用 MOCK 方式支付订单 ${order.orderNo}，金额 ${money(order.payableAmount)}。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('稍后支付'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.payments_outlined, size: 18),
+            label: const Text('确认支付'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final success = await ref
+        .read(ordersControllerProvider.notifier)
+        .payOrder(order);
+    if (!mounted || !success) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('模拟支付成功')));
+  }
+
+  Future<void> _confirmCancel(BookOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('取消订单'),
+        content: Text('确定取消订单 ${order.orderNo} 吗？取消后不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('保留订单'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认取消'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final success = await ref
+        .read(ordersControllerProvider.notifier)
+        .cancelOrder(order);
+    if (!mounted || !success) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('订单已取消')));
+  }
+}
+
+class _OrderFilters extends StatelessWidget {
+  const _OrderFilters({
+    required this.selected,
+    required this.disabled,
+    required this.onSelected,
+  });
+
+  final String? selected;
+  final bool disabled;
+  final ValueChanged<String?> onSelected;
+
+  static const filters = <(String?, String)>[
+    (null, '全部'),
+    ('PENDING_PAYMENT', '待支付'),
+    ('PAID', '待发货'),
+    ('SHIPPED', '待收货'),
+    ('COMPLETED', '已完成'),
+    ('CANCELLED', '已取消'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final filter in filters)
+          ChoiceChip(
+            label: Text(filter.$2),
+            selected: selected == filter.$1,
+            onSelected: disabled ? null : (_) => onSelected(filter.$1),
+            showCheckmark: false,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5),
+              side: const BorderSide(color: CommerceColors.line),
+            ),
+            selectedColor: CommerceColors.ink,
+            labelStyle: TextStyle(
+              color: selected == filter.$1 ? Colors.white : CommerceColors.ink,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  const _OrderCard({
+    required this.order,
+    required this.busy,
+    required this.onPay,
+    required this.onCancel,
+  });
+
+  final BookOrder order;
+  final bool busy;
+  final VoidCallback onPay;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: CommerceColors.line),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final number = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '订单号  ${order.orderNo}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _dateTime(order.createTime),
+                      style: const TextStyle(
+                        color: CommerceColors.placeholder,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                );
+                final status = _StatusBadge(status: order.status);
+                if (constraints.maxWidth < 500) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [number, const SizedBox(height: 10), status],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: number),
+                    status,
+                  ],
+                );
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                for (var index = 0; index < order.items.length; index++) ...[
+                  _OrderLineTile(line: order.items[index]),
+                  if (index != order.items.length - 1)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 11),
+                      child: Divider(height: 1),
+                    ),
+                ],
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: CommerceColors.canvas,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Wrap(
+                    spacing: 24,
+                    runSpacing: 9,
+                    children: [
+                      _Meta(
+                        icon: Icons.person_outline,
+                        text: order.receiverName,
+                      ),
+                      _Meta(
+                        icon: Icons.phone_outlined,
+                        text: order.receiverPhone,
+                      ),
+                      _Meta(
+                        icon: Icons.location_on_outlined,
+                        text: order.receiverAddress,
+                      ),
+                    ],
+                  ),
+                ),
+                if (order.remark.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '备注：${order.remark}',
+                      style: const TextStyle(
+                        color: CommerceColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+                if (order.canPay && order.expireTime != null) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '支付截止：${_dateTime(order.expireTime)}',
+                      style: const TextStyle(
+                        color: CommerceColors.danger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final amount = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '共 ${order.items.fold<int>(0, (sum, item) => sum + item.quantity)} 件  实付 ',
+                          style: const TextStyle(
+                            color: CommerceColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          money(order.payableAmount),
+                          style: const TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    );
+                    final actions = _OrderActions(
+                      order: order,
+                      busy: busy,
+                      onPay: onPay,
+                      onCancel: onCancel,
+                    );
+                    if (constraints.maxWidth < 620) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [amount, const SizedBox(height: 14), actions],
+                      );
+                    }
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [amount, const SizedBox(width: 22), actions],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderLineTile extends StatelessWidget {
+  const _OrderLineTile({required this.line});
+
+  final OrderLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 62,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: CommerceColors.sand,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Icon(
+            Icons.auto_stories_outlined,
+            color: CommerceColors.placeholder,
+          ),
+        ),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                line.bookTitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'serif',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'ISBN ${line.isbn}  ·  ${money(line.unitPrice)} × ${line.quantity}',
+                style: const TextStyle(
+                  color: CommerceColors.muted,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(money(line.subtotal), style: const TextStyle(fontSize: 13)),
+      ],
+    );
+  }
+}
+
+class _OrderActions extends StatelessWidget {
+  const _OrderActions({
+    required this.order,
+    required this.busy,
+    required this.onPay,
+    required this.onCancel,
+  });
+
+  final BookOrder order;
+  final bool busy;
+  final VoidCallback onPay;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!order.canPay && !order.canCancel) return const SizedBox.shrink();
+    if (busy) {
+      return const SizedBox.square(
+        dimension: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: [
+        if (order.canCancel)
+          OutlinedButton(onPressed: onCancel, child: const Text('取消订单')),
+        if (order.canPay)
+          FilledButton.icon(
+            onPressed: onPay,
+            icon: const Icon(Icons.payments_outlined, size: 17),
+            label: const Text('模拟支付'),
+          ),
+      ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      'PENDING_PAYMENT' => CommerceColors.danger,
+      'PAID' || 'SHIPPED' => const Color(0xFF41617A),
+      'COMPLETED' => CommerceColors.success,
+      _ => CommerceColors.muted,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .09),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        _statusLabel(status),
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  const _Meta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: CommerceColors.placeholder),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(color: CommerceColors.muted, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _OrdersLoading extends StatelessWidget {
+  const _OrdersLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 280,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _OrdersFailure extends StatelessWidget {
+  const _OrdersFailure({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_off_outlined, size: 38),
+          const SizedBox(height: 13),
+          const Text('订单暂时无法加载'),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('重新加载'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrdersEmpty extends StatelessWidget {
+  const _OrdersEmpty({required this.filtered, required this.onBrowse});
+
+  final bool filtered;
+  final VoidCallback onBrowse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 72),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: CommerceColors.line),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.receipt_long_outlined,
+            size: 42,
+            color: CommerceColors.placeholder,
+          ),
+          const SizedBox(height: 14),
+          Text(filtered ? '这个状态下暂无订单' : '还没有订单'),
+          if (!filtered) ...[
+            const SizedBox(height: 18),
+            FilledButton(onPressed: onBrowse, child: const Text('去选书')),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _statusLabel(String status) {
+  return switch (status) {
+    'PENDING_PAYMENT' => '待支付',
+    'PAID' => '待发货',
+    'SHIPPED' => '待收货',
+    'COMPLETED' => '已完成',
+    'CANCELLED' => '已取消',
+    _ => status,
+  };
+}
+
+String _dateTime(DateTime? value) {
+  if (value == null) return '--';
+  return DateFormat('yyyy.MM.dd HH:mm').format(value.toLocal());
+}

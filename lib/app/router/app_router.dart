@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/auth_pages.dart';
 import '../../features/books/presentation/books_page.dart';
+import '../../features/cart/presentation/cart_page.dart';
+import '../../features/orders/presentation/checkout_page.dart';
+import '../../features/orders/presentation/orders_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRouterRefresh(ref);
@@ -20,14 +24,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      final isAuthPage =
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
-      final isProtectedPage = const {
-        '/cart',
-        '/orders',
-        '/profile',
-      }.contains(state.matchedLocation);
+      final location = state.matchedLocation;
+      final isAuthPage = location == '/login' || location == '/register';
+      final isProtectedPage =
+          location == '/cart' ||
+          location == '/checkout' ||
+          location == '/orders' ||
+          location.startsWith('/profile');
 
       if (authState.isAuthenticated && isAuthPage) {
         return '/books';
@@ -54,26 +57,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return BookDetailPage(bookId: bookId);
         },
       ),
+      GoRoute(path: '/cart', builder: (context, state) => const CartPage()),
       GoRoute(
-        path: '/cart',
-        builder: (context, state) => const ProtectedPlaceholderPage(
-          title: '购物车',
-          message: '购物车模块将在认证闭环之后接入。当前登录状态已经可以保护这条路由。',
-        ),
+        path: '/checkout',
+        builder: (context, state) => const CheckoutPage(),
       ),
-      GoRoute(
-        path: '/orders',
-        builder: (context, state) => const ProtectedPlaceholderPage(
-          title: '我的订单',
-          message: '订单模块将在购物车完成后接入。当前登录状态已经可以保护这条路由。',
-        ),
-      ),
+      GoRoute(path: '/orders', builder: (context, state) => const OrdersPage()),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProtectedPlaceholderPage(
-          title: '个人中心',
-          message: '用户资料和收货地址模块将在下一阶段接入。',
-        ),
+        builder: (context, state) => const ProfilePage(),
       ),
     ],
   );

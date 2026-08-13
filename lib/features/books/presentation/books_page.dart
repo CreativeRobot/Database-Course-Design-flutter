@@ -10,6 +10,7 @@ import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/category.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../cart/presentation/cart_controller.dart';
 import 'books_controller.dart';
 
 class BooksPage extends ConsumerStatefulWidget {
@@ -165,6 +166,8 @@ class BookDetailPage extends ConsumerWidget {
     final detail = ref.watch(bookDetailProvider(bookId));
     final reviews = ref.watch(bookReviewsProvider(bookId));
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
+    final authState = ref.watch(authControllerProvider);
+    final cartState = ref.watch(cartControllerProvider);
 
     return Scaffold(
       backgroundColor: BookStoreColors.canvas,
@@ -194,6 +197,30 @@ class BookDetailPage extends ConsumerWidget {
           book: book,
           reviews: reviews,
           imageUrl: _coverUrl(baseUrl, book.coverUrl),
+          adding: cartState.busyBookIds.contains(bookId),
+          onAdd: book.stock <= 0 || book.status != 'ON_SALE'
+              ? null
+              : () async {
+                  if (!authState.isAuthenticated) {
+                    context.push('/login');
+                    return;
+                  }
+                  final success = await ref
+                      .read(cartControllerProvider.notifier)
+                      .addItem(bookId: bookId);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? '已加入购物袋' : '加入购物袋失败'),
+                      action: success
+                          ? SnackBarAction(
+                              label: '查看',
+                              onPressed: () => context.go('/cart'),
+                            )
+                          : null,
+                    ),
+                  );
+                },
         ),
       ),
     );
@@ -648,11 +675,15 @@ class _BookDetailContent extends StatelessWidget {
     required this.book,
     required this.reviews,
     required this.imageUrl,
+    required this.adding,
+    required this.onAdd,
   });
 
   final dynamic book;
   final AsyncValue<dynamic> reviews;
   final String? imageUrl;
+  final bool adding;
+  final Future<void> Function()? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -675,7 +706,11 @@ class _BookDetailContent extends StatelessWidget {
                       child: _BookCover(url: imageUrl, large: true),
                     ),
                   );
-                  final summary = _BookSummary(book: book);
+                  final summary = _BookSummary(
+                    book: book,
+                    adding: adding,
+                    onAdd: onAdd,
+                  );
                   return compact
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,9 +757,15 @@ class _BookDetailContent extends StatelessWidget {
 }
 
 class _BookSummary extends StatelessWidget {
-  const _BookSummary({required this.book});
+  const _BookSummary({
+    required this.book,
+    required this.adding,
+    required this.onAdd,
+  });
 
   final dynamic book;
+  final bool adding;
+  final Future<void> Function()? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -775,6 +816,30 @@ class _BookSummary extends StatelessWidget {
               ),
             ],
           ],
+        ),
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: FilledButton.icon(
+            onPressed: adding || onAdd == null ? null : () => onAdd!(),
+            icon: adding
+                ? const SizedBox.square(
+                    dimension: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.shopping_bag_outlined, size: 19),
+            label: Text(
+              adding
+                  ? '正在加入'
+                  : onAdd == null
+                  ? '暂不可购买'
+                  : '加入购物袋',
+            ),
+          ),
         ),
         const SizedBox(height: 28),
         Container(

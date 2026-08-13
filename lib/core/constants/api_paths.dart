@@ -10,8 +10,19 @@ abstract final class ApiPaths {
   static String bookReviews(int bookId) => '$books/$bookId/reviews';
 
   static const me = '/api/user/me';
+  static const mePassword = '/api/user/me/password';
   static const addresses = '/api/user/addresses';
+  static String address(int addressId) => '$addresses/$addressId';
+  static String defaultAddress(int addressId) =>
+      '$addresses/$addressId/default';
   static const cart = '/api/cart';
+  static const cartItems = '/api/cart/items';
+  static const cartSelection = '/api/cart/selection';
+  static const cartSelected = '/api/cart/selected';
+  static String cartItem(int bookId) => '$cartItems/$bookId';
   static const orders = '/api/orders';
+  static String order(int orderId) => '$orders/$orderId';
+  static String cancelOrder(int orderId) => '$orders/$orderId/cancel';
+  static String orderPayment(int orderId) => '$orders/$orderId/payment';
   static const reviews = '/api/reviews';
 }
