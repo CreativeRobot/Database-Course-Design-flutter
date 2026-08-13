@@ -24,5 +24,9 @@ abstract final class ApiPaths {
   static String order(int orderId) => '$orders/$orderId';
   static String cancelOrder(int orderId) => '$orders/$orderId/cancel';
   static String orderPayment(int orderId) => '$orders/$orderId/payment';
+  static String confirmOrderReceipt(int orderId) =>
+      '$orders/$orderId/confirm-receipt';
   static const reviews = '/api/reviews';
+  static const myReviews = '$reviews/me';
+  static String review(int reviewId) => '$reviews/$reviewId';
 }

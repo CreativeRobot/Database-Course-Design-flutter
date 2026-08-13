@@ -134,6 +134,41 @@ class OrdersController extends StateNotifier<OrdersState> {
     return _runOrderAction(order.id, () => _repository.cancelOrder(order.id));
   }
 
+  Future<BookOrder?> confirmReceipt(BookOrder order) async {
+    if (state.busyOrderId != null) {
+      return null;
+    }
+    state = state.copyWith(busyOrderId: order.id, clearError: true);
+    try {
+      final updated = await _repository.confirmReceipt(order.id);
+      state = state.copyWith(
+        status: OrdersStatus.ready,
+        orders: [
+          for (final item in state.orders)
+            if (item.id != updated.id)
+              item
+            else if (state.filter == null || state.filter == updated.status)
+              updated,
+        ],
+        clearBusyOrder: true,
+        clearError: true,
+      );
+      return updated;
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        clearBusyOrder: true,
+        errorMessage: await _messageFor(error),
+      );
+      return null;
+    } catch (_) {
+      state = state.copyWith(
+        clearBusyOrder: true,
+        errorMessage: '确认收货失败，请稍后再试',
+      );
+      return null;
+    }
+  }
+
   Future<bool> _runOrderAction(
     int orderId,
     Future<Object?> Function() action,
@@ -200,3 +235,10 @@ final checkoutAddressesProvider = FutureProvider.autoDispose<List<UserAddress>>(
     return ref.watch(profileRepositoryProvider).listAddresses();
   },
 );
+
+final orderDetailProvider = FutureProvider.autoDispose.family<BookOrder, int>((
+  ref,
+  orderId,
+) {
+  return ref.watch(orderRepositoryProvider).getOrder(orderId);
+});

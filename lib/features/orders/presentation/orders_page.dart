@@ -103,6 +103,11 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                         _confirmPay(state.orders[index]),
                                     onCancel: () =>
                                         _confirmCancel(state.orders[index]),
+                                    onConfirm: () =>
+                                        _confirmReceipt(state.orders[index]),
+                                    onOpen: () => context.push(
+                                      '/orders/${state.orders[index].id}',
+                                    ),
                                   ),
                                   if (index != state.orders.length - 1)
                                     const SizedBox(height: 14),
@@ -180,6 +185,41 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
       context,
     ).showSnackBar(const SnackBar(content: Text('订单已取消')));
   }
+
+  Future<void> _confirmReceipt(BookOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认收货'),
+        content: Text('确认已收到订单 ${order.orderNo} 的商品吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('再看看'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认收货'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final updated = await ref
+        .read(ordersControllerProvider.notifier)
+        .confirmReceipt(order);
+    if (!mounted) return;
+    if (updated == null) {
+      final message = ref.read(ordersControllerProvider).errorMessage;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message ?? '确认收货失败，请稍后再试')));
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已确认收货，现在可以评价商品了')));
+  }
 }
 
 class _OrderFilters extends StatelessWidget {
@@ -196,7 +236,7 @@ class _OrderFilters extends StatelessWidget {
   static const filters = <(String?, String)>[
     (null, '全部'),
     ('PENDING_PAYMENT', '待支付'),
-    ('PAID', '待发货'),
+    ('PENDING_SHIPMENT', '待发货'),
     ('SHIPPED', '待收货'),
     ('COMPLETED', '已完成'),
     ('CANCELLED', '已取消'),
@@ -236,12 +276,16 @@ class _OrderCard extends StatelessWidget {
     required this.busy,
     required this.onPay,
     required this.onCancel,
+    required this.onOpen,
+    required this.onConfirm,
   });
 
   final BookOrder order;
   final bool busy;
   final VoidCallback onPay;
   final VoidCallback onCancel;
+  final VoidCallback onOpen;
+  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
@@ -387,6 +431,8 @@ class _OrderCard extends StatelessWidget {
                       busy: busy,
                       onPay: onPay,
                       onCancel: onCancel,
+                      onOpen: onOpen,
+                      onConfirm: onConfirm,
                     );
                     if (constraints.maxWidth < 620) {
                       return Column(
@@ -469,16 +515,26 @@ class _OrderActions extends StatelessWidget {
     required this.busy,
     required this.onPay,
     required this.onCancel,
+    required this.onOpen,
+    required this.onConfirm,
   });
 
   final BookOrder order;
   final bool busy;
   final VoidCallback onPay;
   final VoidCallback onCancel;
+  final VoidCallback onOpen;
+  final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
-    if (!order.canPay && !order.canCancel) return const SizedBox.shrink();
+    if (!order.canPay && !order.canCancel && !order.canConfirmReceipt) {
+      return OutlinedButton.icon(
+        onPressed: onOpen,
+        icon: const Icon(Icons.open_in_new, size: 16),
+        label: const Text('查看详情'),
+      );
+    }
     if (busy) {
       return const SizedBox.square(
         dimension: 22,
@@ -490,6 +546,11 @@ class _OrderActions extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.end,
       children: [
+        OutlinedButton.icon(
+          onPressed: onOpen,
+          icon: const Icon(Icons.open_in_new, size: 16),
+          label: const Text('详情'),
+        ),
         if (order.canCancel)
           OutlinedButton(onPressed: onCancel, child: const Text('取消订单')),
         if (order.canPay)
@@ -497,6 +558,12 @@ class _OrderActions extends StatelessWidget {
             onPressed: onPay,
             icon: const Icon(Icons.payments_outlined, size: 17),
             label: const Text('模拟支付'),
+          ),
+        if (order.canConfirmReceipt)
+          FilledButton.icon(
+            onPressed: onConfirm,
+            icon: const Icon(Icons.check_circle_outline, size: 17),
+            label: const Text('确认收货'),
           ),
       ],
     );
@@ -512,7 +579,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       'PENDING_PAYMENT' => CommerceColors.danger,
-      'PAID' || 'SHIPPED' => const Color(0xFF41617A),
+      'PENDING_SHIPMENT' || 'SHIPPED' => const Color(0xFF41617A),
       'COMPLETED' => CommerceColors.success,
       _ => CommerceColors.muted,
     };
@@ -631,7 +698,7 @@ class _OrdersEmpty extends StatelessWidget {
 String _statusLabel(String status) {
   return switch (status) {
     'PENDING_PAYMENT' => '待支付',
-    'PAID' => '待发货',
+    'PENDING_SHIPMENT' => '待发货',
     'SHIPPED' => '待收货',
     'COMPLETED' => '已完成',
     'CANCELLED' => '已取消',

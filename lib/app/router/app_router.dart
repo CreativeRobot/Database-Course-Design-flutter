@@ -8,6 +8,7 @@ import '../../features/books/presentation/books_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
 import '../../features/orders/presentation/checkout_page.dart';
 import '../../features/orders/presentation/orders_page.dart';
+import '../../features/orders/presentation/order_detail_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -29,7 +30,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isProtectedPage =
           location == '/cart' ||
           location == '/checkout' ||
-          location == '/orders' ||
+          location.startsWith('/orders') ||
           location.startsWith('/profile');
 
       if (authState.isAuthenticated && isAuthPage) {
@@ -63,6 +64,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CheckoutPage(),
       ),
       GoRoute(path: '/orders', builder: (context, state) => const OrdersPage()),
+      GoRoute(
+        path: '/orders/:orderId',
+        builder: (context, state) {
+          final orderId = int.tryParse(state.pathParameters['orderId'] ?? '');
+          if (orderId == null) return const OrdersPage();
+          return OrderDetailPage(orderId: orderId);
+        },
+      ),
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfilePage(),

@@ -41,6 +41,14 @@ class OrderRepository {
     return response.data;
   }
 
+  Future<BookOrder> getOrder(int orderId) async {
+    final response = await _apiClient.get<BookOrder>(
+      ApiPaths.order(orderId),
+      parser: BookOrder.fromJson,
+    );
+    return response.data;
+  }
+
   Future<BookOrder> cancelOrder(int orderId) async {
     final response = await _apiClient.put<BookOrder>(
       ApiPaths.cancelOrder(orderId),
@@ -54,6 +62,14 @@ class OrderRepository {
       ApiPaths.orderPayment(orderId),
       data: const {'paymentMethod': 'MOCK'},
       parser: PaymentResult.fromJson,
+    );
+    return response.data;
+  }
+
+  Future<BookOrder> confirmReceipt(int orderId) async {
+    final response = await _apiClient.put<BookOrder>(
+      ApiPaths.confirmOrderReceipt(orderId),
+      parser: BookOrder.fromJson,
     );
     return response.data;
   }
