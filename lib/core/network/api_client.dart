@@ -96,6 +96,43 @@ class ApiClient {
     );
   }
 
+  Future<ApiResponse<T>> postMultipart<T>(
+    String path, {
+    required List<int> bytes,
+    required String filename,
+    T Function(dynamic value)? parser,
+  }) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        path,
+        options: Options(contentType: 'multipart/form-data'),
+        data: FormData.fromMap({
+          'file': MultipartFile.fromBytes(bytes, filename: filename),
+        }),
+      );
+      final result = ApiResponse<T>.fromJson(response.data, parser: parser);
+      if (!result.isSuccess) {
+        throw ApiException(
+          statusCode: response.statusCode,
+          code: result.code,
+          message: result.message,
+        );
+      }
+      return result;
+    } on DioException catch (error) {
+      final body = error.response?.data;
+      throw ApiException(
+        statusCode: error.response?.statusCode,
+        code: body is Map<String, dynamic>
+            ? (body['code'] as num?)?.toInt()
+            : null,
+        message: body is Map<String, dynamic>
+            ? body['message'] as String? ?? _messageFor(error)
+            : _messageFor(error),
+      );
+    }
+  }
+
   Future<ApiResponse<T>> put<T>(
     String path, {
     Object? data,

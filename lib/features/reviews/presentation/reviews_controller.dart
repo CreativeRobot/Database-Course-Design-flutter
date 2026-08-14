@@ -12,14 +12,20 @@ class ReviewsState {
   const ReviewsState({
     this.status = ReviewsStatus.initial,
     this.reviews = const [],
+    this.visibleCount = 10,
     this.busyOrderItemId,
     this.errorMessage,
   });
 
   final ReviewsStatus status;
   final List<UserReview> reviews;
+  final int visibleCount;
   final int? busyOrderItemId;
   final String? errorMessage;
+
+  List<UserReview> get visibleReviews =>
+      reviews.take(visibleCount).toList(growable: false);
+  bool get hasMore => visibleCount < reviews.length;
 
   UserReview? reviewFor(int orderItemId) {
     for (final review in reviews) {
@@ -31,6 +37,7 @@ class ReviewsState {
   ReviewsState copyWith({
     ReviewsStatus? status,
     List<UserReview>? reviews,
+    int? visibleCount,
     int? busyOrderItemId,
     bool clearBusy = false,
     String? errorMessage,
@@ -39,6 +46,7 @@ class ReviewsState {
     return ReviewsState(
       status: status ?? this.status,
       reviews: reviews ?? this.reviews,
+      visibleCount: visibleCount ?? this.visibleCount,
       busyOrderItemId: clearBusy
           ? null
           : busyOrderItemId ?? this.busyOrderItemId,
@@ -66,6 +74,7 @@ class ReviewsController extends StateNotifier<ReviewsState> {
       state = state.copyWith(
         status: ReviewsStatus.ready,
         reviews: reviews,
+        visibleCount: 10,
         clearError: true,
       );
     } on ApiException catch (error) {
@@ -79,6 +88,12 @@ class ReviewsController extends StateNotifier<ReviewsState> {
         errorMessage: '评价暂时无法加载',
       );
     }
+  }
+
+  void loadMore() {
+    if (!state.hasMore) return;
+    final nextCount = (state.visibleCount + 10).clamp(0, state.reviews.length);
+    state = state.copyWith(visibleCount: nextCount);
   }
 
   Future<UserReview?> saveReview({
@@ -107,6 +122,7 @@ class ReviewsController extends StateNotifier<ReviewsState> {
           saved,
           ...state.reviews.where((review) => review.id != saved.id),
         ],
+        visibleCount: state.visibleCount + (existing == null ? 1 : 0),
         clearBusy: true,
         clearError: true,
       );

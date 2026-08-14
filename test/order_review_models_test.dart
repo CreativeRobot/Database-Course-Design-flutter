@@ -1,5 +1,7 @@
 import 'package:flutter_application_bookstore/features/orders/data/order_models.dart';
+import 'package:flutter_application_bookstore/features/orders/presentation/orders_controller.dart';
 import 'package:flutter_application_bookstore/features/reviews/data/review_models.dart';
+import 'package:flutter_application_bookstore/features/reviews/presentation/reviews_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -39,6 +41,34 @@ void main() {
       () => UserReview.fromJson({'rating': 5, 'content': 'missing ids'}),
       throwsFormatException,
     );
+  });
+
+  test('order pagination reports whether another page is available', () {
+    const firstPage = OrdersState(page: 1, totalPages: 3, total: 24);
+    const lastPage = OrdersState(page: 3, totalPages: 3, total: 24);
+
+    expect(firstPage.hasMore, isTrue);
+    expect(lastPage.hasMore, isFalse);
+  });
+
+  test('review pagination exposes only the requested batch', () {
+    final reviews = List.generate(
+      12,
+      (index) => UserReview.fromJson({
+        'id': index + 1,
+        'bookId': index + 1,
+        'bookTitle': 'Book $index',
+        'orderItemId': 100 + index,
+        'rating': 5,
+        'content': '',
+        'status': 1,
+      }),
+    );
+    final state = ReviewsState(reviews: reviews, visibleCount: 10);
+
+    expect(state.visibleReviews, hasLength(10));
+    expect(state.hasMore, isTrue);
+    expect(state.reviewFor(111), isNotNull);
   });
 }
 

@@ -11,7 +11,7 @@ class OrderRepository {
   Future<PageResponse<BookOrder>> listOrders({
     String? status,
     int page = 1,
-    int size = 50,
+    int size = 10,
   }) async {
     final response = await _apiClient.get<PageResponse<BookOrder>>(
       ApiPaths.orders,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -25,14 +27,15 @@ class CommerceHeader extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: CommerceColors.line)),
       ),
-      child: Row(
-        children: [
-          InkWell(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final logo = InkWell(
             borderRadius: BorderRadius.circular(6),
             onTap: () => context.go('/books'),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 5),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.auto_stories_outlined, size: 22),
                   SizedBox(width: 10),
@@ -47,20 +50,71 @@ class CommerceHeader extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-          const Spacer(),
-          _destination(context, '继续选书', Icons.menu_book_outlined, 'books'),
-          _destination(context, '购物袋', Icons.shopping_bag_outlined, 'cart'),
-          _destination(context, '我的订单', Icons.receipt_long_outlined, 'orders'),
-          _destination(
-            context,
-            '个人中心',
-            Icons.person_outline_rounded,
-            'profile',
-          ),
-        ],
+          );
+          if (constraints.maxWidth < 560) {
+            return Row(
+              children: [
+                logo,
+                const Spacer(),
+                Text(
+                  _labelFor(current),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                PopupMenuButton<String>(
+                  tooltip: '打开导航',
+                  icon: const Icon(Icons.menu_rounded),
+                  onSelected: (target) => context.go('/$target'),
+                  itemBuilder: (context) => [
+                    for (final item in _destinations)
+                      PopupMenuItem(
+                        value: item.$1,
+                        child: Row(
+                          children: [
+                            Icon(item.$3, size: 19),
+                            const SizedBox(width: 12),
+                            Text(item.$2),
+                            if (current == item.$1) ...[
+                              const Spacer(),
+                              const Icon(Icons.check_rounded, size: 18),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              logo,
+              const Spacer(),
+              for (final item in _destinations)
+                _destination(context, item.$2, item.$3, item.$1),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  static const _destinations = <(String, String, IconData)>[
+    ('books', '继续选书', Icons.menu_book_outlined),
+    ('cart', '购物袋', Icons.shopping_bag_outlined),
+    ('orders', '我的订单', Icons.receipt_long_outlined),
+    ('reviews', '我的评价', Icons.rate_review_outlined),
+    ('profile', '个人中心', Icons.person_outline_rounded),
+  ];
+
+  String _labelFor(String target) {
+    for (final item in _destinations) {
+      if (item.$1 == target) return item.$2;
+    }
+    return '导航';
   }
 
   Widget _destination(
@@ -80,6 +134,178 @@ class CommerceHeader extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       icon: Icon(icon, size: 20),
+    );
+  }
+}
+
+class CommerceLoadingState extends StatelessWidget {
+  const CommerceLoadingState({this.message = '正在加载', super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(message, style: const TextStyle(color: CommerceColors.muted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CommerceErrorState extends StatelessWidget {
+  const CommerceErrorState({
+    required this.message,
+    required this.onRetry,
+    super.key,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 40),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('重新加载'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CommerceEmptyState extends StatelessWidget {
+  const CommerceEmptyState({
+    required this.icon,
+    required this.message,
+    this.action,
+    super.key,
+  });
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 260),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: CommerceColors.line),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 42, color: CommerceColors.placeholder),
+          const SizedBox(height: 14),
+          Text(message, textAlign: TextAlign.center),
+          if (action != null) ...[const SizedBox(height: 18), action!],
+        ],
+      ),
+    );
+  }
+}
+
+class CommerceCountdown extends StatefulWidget {
+  const CommerceCountdown({
+    required this.expireTime,
+    this.onExpired,
+    this.prefix = '剩余支付时间',
+    super.key,
+  });
+
+  final DateTime expireTime;
+  final VoidCallback? onExpired;
+  final String prefix;
+
+  @override
+  State<CommerceCountdown> createState() => _CommerceCountdownState();
+}
+
+class _CommerceCountdownState extends State<CommerceCountdown> {
+  Timer? _timer;
+  bool _reportedExpired = false;
+
+  Duration get _remaining =>
+      widget.expireTime.toLocal().difference(DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant CommerceCountdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expireTime != widget.expireTime) {
+      _reportedExpired = false;
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (_remaining <= Duration.zero && !_reportedExpired) {
+        _reportedExpired = true;
+        widget.onExpired?.call();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = _remaining;
+    final expired = remaining <= Duration.zero;
+    final seconds = expired ? 0 : remaining.inSeconds;
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    final value = hours > 0
+        ? '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}'
+        : '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    return Text(
+      expired ? '支付时间已截止，正在刷新订单状态' : '${widget.prefix} $value',
+      style: const TextStyle(
+        color: CommerceColors.danger,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 }

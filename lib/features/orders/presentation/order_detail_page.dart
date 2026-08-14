@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,18 +21,34 @@ class OrderDetailPage extends ConsumerStatefulWidget {
 }
 
 class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
+  Timer? _refreshTimer;
+  bool _refreshing = false;
+
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(
-      () => ref.read(reviewsControllerProvider.notifier).loadMyReviews(),
-    );
+    Future<void>.microtask(() {
+      ref.read(ordersControllerProvider.notifier).clearError();
+      return ref.read(reviewsControllerProvider.notifier).loadMyReviews();
+    });
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      final order = ref.read(orderDetailProvider(widget.orderId)).asData?.value;
+      if (order?.canPay ?? false) _refreshOrder();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final order = ref.watch(orderDetailProvider(widget.orderId));
     final reviews = ref.watch(reviewsControllerProvider);
+    final orders = ref.watch(ordersControllerProvider);
     return Scaffold(
       backgroundColor: CommerceColors.canvas,
       body: SafeArea(
@@ -39,11 +57,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
             const CommerceHeader(current: 'orders'),
             Expanded(
               child: order.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => _DetailError(
+                loading: () => const CommerceLoadingState(message: '正在加载订单详情'),
+                error: (error, _) => CommerceErrorState(
                   message: '订单详情暂时无法加载',
-                  onRetry: () =>
-                      ref.invalidate(orderDetailProvider(widget.orderId)),
+                  onRetry: _refreshOrder,
                 ),
                 data: (value) => RefreshIndicator(
                   onRefresh: () async {
@@ -60,7 +77,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                           child: _DetailContent(
                             order: value,
                             reviews: reviews,
+                            actionBusy: orders.busyOrderId == value.id,
+                            actionError: orders.errorMessage,
+                            onPay: () => _confirmPay(value),
+                            onCancel: () => _confirmCancel(value),
                             onConfirm: () => _confirmReceipt(value),
+                            onExpired: _refreshOrder,
                             onReloadReviews: () => ref
                                 .read(reviewsControllerProvider.notifier)
                                 .loadMyReviews(force: true),
@@ -78,6 +100,97 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshOrder() async {
+    if (_refreshing || !mounted) return;
+    _refreshing = true;
+    ref.invalidate(orderDetailProvider(widget.orderId));
+    try {
+      await ref.read(orderDetailProvider(widget.orderId).future);
+    } catch (_) {
+      // The provider exposes the error state to the shared error widget.
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  Future<void> _confirmPay(BookOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('模拟支付'),
+        content: Text(
+          '将使用 MOCK 方式支付订单 ${order.orderNo}，金额 ${money(order.payableAmount)}。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('稍后支付'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.payments_outlined, size: 18),
+            label: const Text('确认支付'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final success = await ref
+        .read(ordersControllerProvider.notifier)
+        .payOrder(order);
+    if (!mounted) return;
+    if (!success) {
+      _showOrderError('支付失败，请稍后再试');
+      return;
+    }
+    await _refreshOrder();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('模拟支付成功')));
+  }
+
+  Future<void> _confirmCancel(BookOrder order) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('取消订单'),
+        content: Text('确定取消订单 ${order.orderNo} 吗？取消后不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('保留订单'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认取消'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final success = await ref
+        .read(ordersControllerProvider.notifier)
+        .cancelOrder(order);
+    if (!mounted) return;
+    if (!success) {
+      _showOrderError('取消订单失败，请稍后再试');
+      return;
+    }
+    await _refreshOrder();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('订单已取消')));
+  }
+
+  void _showOrderError(String fallback) {
+    final message = ref.read(ordersControllerProvider).errorMessage ?? fallback;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _confirmReceipt(BookOrder order) async {
@@ -148,14 +261,24 @@ class _DetailContent extends StatelessWidget {
   const _DetailContent({
     required this.order,
     required this.reviews,
+    required this.actionBusy,
+    required this.actionError,
+    required this.onPay,
+    required this.onCancel,
     required this.onConfirm,
+    required this.onExpired,
     required this.onReloadReviews,
     required this.onReview,
   });
 
   final BookOrder order;
   final ReviewsState reviews;
+  final bool actionBusy;
+  final String? actionError;
+  final VoidCallback onPay;
+  final VoidCallback onCancel;
   final VoidCallback onConfirm;
+  final VoidCallback onExpired;
   final VoidCallback onReloadReviews;
   final void Function(OrderLine line, UserReview? existing) onReview;
 
@@ -186,6 +309,28 @@ class _DetailContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 22),
+        if (actionError != null) ...[
+          CommerceNotice(message: actionError!),
+          const SizedBox(height: 16),
+        ],
+        if (order.canPay && order.expireTime != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            decoration: BoxDecoration(
+              color: CommerceColors.danger.withValues(alpha: .06),
+              border: Border.all(
+                color: CommerceColors.danger.withValues(alpha: .2),
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: CommerceCountdown(
+              expireTime: order.expireTime!,
+              onExpired: onExpired,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (order.status == 'COMPLETED' &&
             reviews.status == ReviewsStatus.loading) ...[
           const LinearProgressIndicator(),
@@ -288,15 +433,39 @@ class _DetailContent extends StatelessWidget {
             ],
           ),
         ),
-        if (order.canConfirmReceipt) ...[
+        if (order.canPay || order.canCancel || order.canConfirmReceipt) ...[
           const SizedBox(height: 18),
           Align(
             alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: onConfirm,
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('确认收货'),
-            ),
+            child: actionBusy
+                ? const SizedBox.square(
+                    dimension: 26,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      if (order.canCancel)
+                        OutlinedButton(
+                          onPressed: onCancel,
+                          child: const Text('取消订单'),
+                        ),
+                      if (order.canPay)
+                        FilledButton.icon(
+                          onPressed: onPay,
+                          icon: const Icon(Icons.payments_outlined, size: 18),
+                          label: const Text('模拟支付'),
+                        ),
+                      if (order.canConfirmReceipt)
+                        FilledButton.icon(
+                          onPressed: onConfirm,
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('确认收货'),
+                        ),
+                    ],
+                  ),
           ),
         ],
       ],
@@ -572,31 +741,6 @@ class _StatusBadge extends StatelessWidget {
     return Chip(
       label: Text(_statusLabel(status)),
       visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _DetailError extends StatelessWidget {
-  const _DetailError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(message),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('重新加载'),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -29,4 +29,26 @@ abstract final class ApiPaths {
   static const reviews = '/api/reviews';
   static const myReviews = '$reviews/me';
   static String review(int reviewId) => '$reviews/$reviewId';
+
+  static const admin = '/api/admin';
+  static const adminBooks = '$admin/books';
+  static String adminBook(int bookId) => '$adminBooks/$bookId';
+  static String adminBookStatus(int bookId) => '$adminBook(bookId)/status';
+  static String adminBookStock(int bookId) => '$adminBook(bookId)/stock';
+  static const adminAuthors = '$admin/authors';
+  static String adminAuthor(int id) => '$adminAuthors/$id';
+  static const adminPublishers = '$admin/publishers';
+  static String adminPublisher(int id) => '$adminPublishers/$id';
+  static const adminCategories = '$admin/categories';
+  static String adminCategory(int id) => '$adminCategories/$id';
+  static String adminCategoryStatus(int id) => '$adminCategory(id)/status';
+  static const adminOrders = '$admin/orders';
+  static String adminOrder(int id) => '$adminOrders/$id';
+  static String adminShipOrder(int id) => '$adminOrder(id)/ship';
+  static const adminStatistics = '$admin/statistics/overview';
+  static const adminReviews = '$admin/reviews';
+  static String adminReview(int id) => '$adminReviews/$id';
+  static String adminReviewStatus(int id) => '$adminReview(id)/status';
+  static const adminInventoryLogs = '$admin/inventory-logs';
+  static const adminImageUpload = '$admin/uploads/images';
 }

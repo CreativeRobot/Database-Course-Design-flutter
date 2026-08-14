@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,12 +17,27 @@ class OrdersPage extends ConsumerStatefulWidget {
 }
 
 class _OrdersPageState extends ConsumerState<OrdersPage> {
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     Future<void>.microtask(
       () => ref.read(ordersControllerProvider.notifier).loadOrders(),
     );
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      final state = ref.read(ordersControllerProvider);
+      if (state.orders.any((order) => order.canPay)) {
+        ref.read(ordersControllerProvider.notifier).refreshLoadedOrders();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -75,16 +92,25 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                           ],
                           if (state.status == OrdersStatus.loading &&
                               state.orders.isEmpty)
-                            const _OrdersLoading()
+                            const CommerceLoadingState(message: '正在加载订单')
                           else if (state.status == OrdersStatus.failure &&
                               state.orders.isEmpty)
-                            _OrdersFailure(
+                            CommerceErrorState(
+                              message: state.errorMessage ?? '订单暂时无法加载',
                               onRetry: () => controller.loadOrders(),
                             )
                           else if (state.orders.isEmpty)
-                            _OrdersEmpty(
-                              filtered: state.filter != null,
-                              onBrowse: () => context.go('/books'),
+                            CommerceEmptyState(
+                              icon: Icons.receipt_long_outlined,
+                              message: state.filter != null
+                                  ? '这个状态下暂无订单'
+                                  : '还没有订单',
+                              action: state.filter == null
+                                  ? FilledButton(
+                                      onPressed: () => context.go('/books'),
+                                      child: const Text('去选书'),
+                                    )
+                                  : null,
                             )
                           else
                             Column(
@@ -108,9 +134,31 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                                     onOpen: () => context.push(
                                       '/orders/${state.orders[index].id}',
                                     ),
+                                    onExpired: controller.refreshLoadedOrders,
                                   ),
                                   if (index != state.orders.length - 1)
                                     const SizedBox(height: 14),
+                                ],
+                                if (state.hasMore || state.loadingMore) ...[
+                                  const SizedBox(height: 22),
+                                  Center(
+                                    child: state.loadingMore
+                                        ? const SizedBox.square(
+                                            dimension: 26,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : OutlinedButton.icon(
+                                            onPressed: controller.loadMore,
+                                            icon: const Icon(
+                                              Icons.expand_more_rounded,
+                                            ),
+                                            label: Text(
+                                              '加载更多（已显示 ${state.orders.length}/${state.total}）',
+                                            ),
+                                          ),
+                                  ),
                                 ],
                               ],
                             ),
@@ -278,6 +326,7 @@ class _OrderCard extends StatelessWidget {
     required this.onCancel,
     required this.onOpen,
     required this.onConfirm,
+    required this.onExpired,
   });
 
   final BookOrder order;
@@ -286,6 +335,7 @@ class _OrderCard extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onOpen;
   final VoidCallback onConfirm;
+  final VoidCallback onExpired;
 
   @override
   Widget build(BuildContext context) {
@@ -394,13 +444,9 @@ class _OrderCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      '支付截止：${_dateTime(order.expireTime)}',
-                      style: const TextStyle(
-                        color: CommerceColors.danger,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    child: CommerceCountdown(
+                      expireTime: order.expireTime!,
+                      onExpired: onExpired,
                     ),
                   ),
                 ],
@@ -619,78 +665,6 @@ class _Meta extends StatelessWidget {
           style: const TextStyle(color: CommerceColors.muted, fontSize: 12),
         ),
       ],
-    );
-  }
-}
-
-class _OrdersLoading extends StatelessWidget {
-  const _OrdersLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 280,
-      child: Center(child: CircularProgressIndicator()),
-    );
-  }
-}
-
-class _OrdersFailure extends StatelessWidget {
-  const _OrdersFailure({required this.onRetry});
-
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        children: [
-          const Icon(Icons.cloud_off_outlined, size: 38),
-          const SizedBox(height: 13),
-          const Text('订单暂时无法加载'),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('重新加载'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OrdersEmpty extends StatelessWidget {
-  const _OrdersEmpty({required this.filtered, required this.onBrowse});
-
-  final bool filtered;
-  final VoidCallback onBrowse;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 72),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: CommerceColors.line),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.receipt_long_outlined,
-            size: 42,
-            color: CommerceColors.placeholder,
-          ),
-          const SizedBox(height: 14),
-          Text(filtered ? '这个状态下暂无订单' : '还没有订单'),
-          if (!filtered) ...[
-            const SizedBox(height: 18),
-            FilledButton(onPressed: onBrowse, child: const Text('去选书')),
-          ],
-        ],
-      ),
     );
   }
 }

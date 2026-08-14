@@ -18,6 +18,10 @@ class OrdersState {
     this.filter,
     this.busyOrderId,
     this.creating = false,
+    this.page = 0,
+    this.totalPages = 0,
+    this.total = 0,
+    this.loadingMore = false,
     this.errorMessage,
   });
 
@@ -26,7 +30,13 @@ class OrdersState {
   final String? filter;
   final int? busyOrderId;
   final bool creating;
+  final int page;
+  final int totalPages;
+  final int total;
+  final bool loadingMore;
   final String? errorMessage;
+
+  bool get hasMore => page < totalPages;
 
   OrdersState copyWith({
     OrdersStatus? status,
@@ -36,6 +46,10 @@ class OrdersState {
     int? busyOrderId,
     bool clearBusyOrder = false,
     bool? creating,
+    int? page,
+    int? totalPages,
+    int? total,
+    bool? loadingMore,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -45,6 +59,10 @@ class OrdersState {
       filter: clearFilter ? null : filter ?? this.filter,
       busyOrderId: clearBusyOrder ? null : busyOrderId ?? this.busyOrderId,
       creating: creating ?? this.creating,
+      page: page ?? this.page,
+      totalPages: totalPages ?? this.totalPages,
+      total: total ?? this.total,
+      loadingMore: loadingMore ?? this.loadingMore,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -63,22 +81,36 @@ class OrdersController extends StateNotifier<OrdersState> {
   final OrderRepository _repository;
   final AuthController _authController;
   final CartController _cartController;
+  static const _pageSize = 10;
+  bool _refreshing = false;
 
   Future<void> loadOrders({String? status, bool clearFilter = false}) async {
     final nextFilter = clearFilter ? null : status ?? state.filter;
+    final filterChanged = nextFilter != state.filter;
     state = state.copyWith(
       status: OrdersStatus.loading,
+      orders: filterChanged ? const [] : state.orders,
       filter: nextFilter,
       clearFilter: clearFilter,
+      page: filterChanged ? 0 : state.page,
+      totalPages: filterChanged ? 0 : state.totalPages,
+      total: filterChanged ? 0 : state.total,
       clearError: true,
     );
     try {
-      final page = await _repository.listOrders(status: nextFilter);
+      final page = await _repository.listOrders(
+        status: nextFilter,
+        size: _pageSize,
+      );
       state = state.copyWith(
         status: OrdersStatus.ready,
         orders: page.records,
         filter: nextFilter,
         clearFilter: nextFilter == null,
+        page: page.page,
+        totalPages: page.totalPages,
+        total: page.total,
+        loadingMore: false,
         clearError: true,
       );
     } on ApiException catch (error) {
@@ -91,6 +123,85 @@ class OrdersController extends StateNotifier<OrdersState> {
         status: OrdersStatus.failure,
         errorMessage: '订单暂时无法加载',
       );
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (state.loadingMore ||
+        state.status != OrdersStatus.ready ||
+        !state.hasMore) {
+      return;
+    }
+    final nextPage = state.page + 1;
+    state = state.copyWith(loadingMore: true, clearError: true);
+    try {
+      final page = await _repository.listOrders(
+        status: state.filter,
+        page: nextPage,
+        size: _pageSize,
+      );
+      final knownIds = state.orders.map((order) => order.id).toSet();
+      state = state.copyWith(
+        status: OrdersStatus.ready,
+        orders: [
+          ...state.orders,
+          ...page.records.where((order) => !knownIds.contains(order.id)),
+        ],
+        page: page.page,
+        totalPages: page.totalPages,
+        total: page.total,
+        loadingMore: false,
+        clearError: true,
+      );
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        loadingMore: false,
+        errorMessage: await _messageFor(error),
+      );
+    } catch (_) {
+      state = state.copyWith(loadingMore: false, errorMessage: '更多订单暂时无法加载');
+    }
+  }
+
+  Future<void> refreshLoadedOrders() async {
+    if (_refreshing ||
+        state.status == OrdersStatus.loading ||
+        state.loadingMore) {
+      return;
+    }
+    _refreshing = true;
+    final pagesToLoad = state.page < 1 ? 1 : state.page;
+    try {
+      final refreshed = <BookOrder>[];
+      var totalPages = 0;
+      var total = 0;
+      var loadedPage = 0;
+      for (var pageNumber = 1; pageNumber <= pagesToLoad; pageNumber++) {
+        final page = await _repository.listOrders(
+          status: state.filter,
+          page: pageNumber,
+          size: _pageSize,
+        );
+        refreshed.addAll(page.records);
+        totalPages = page.totalPages;
+        total = page.total;
+        loadedPage = page.page;
+        if (pageNumber >= page.totalPages) break;
+      }
+      state = state.copyWith(
+        status: OrdersStatus.ready,
+        orders: refreshed,
+        page: loadedPage,
+        totalPages: totalPages,
+        total: total,
+        clearError: true,
+      );
+    } on ApiException catch (error) {
+      state = state.copyWith(errorMessage: await _messageFor(error));
+    } catch (_) {
+      state = state.copyWith(errorMessage: '订单状态刷新失败，请手动刷新');
+    } finally {
+      _refreshing = false;
     }
   }
 
@@ -153,6 +264,7 @@ class OrdersController extends StateNotifier<OrdersState> {
         clearBusyOrder: true,
         clearError: true,
       );
+      await refreshLoadedOrders();
       return updated;
     } on ApiException catch (error) {
       state = state.copyWith(
@@ -169,6 +281,10 @@ class OrdersController extends StateNotifier<OrdersState> {
     }
   }
 
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
+
   Future<bool> _runOrderAction(
     int orderId,
     Future<Object?> Function() action,
@@ -179,13 +295,8 @@ class OrdersController extends StateNotifier<OrdersState> {
     state = state.copyWith(busyOrderId: orderId, clearError: true);
     try {
       await action();
-      final page = await _repository.listOrders(status: state.filter);
-      state = state.copyWith(
-        status: OrdersStatus.ready,
-        orders: page.records,
-        clearBusyOrder: true,
-        clearError: true,
-      );
+      state = state.copyWith(clearBusyOrder: true, clearError: true);
+      await refreshLoadedOrders();
       return true;
     } on ApiException catch (error) {
       state = state.copyWith(
