@@ -1,15 +1,16 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 import '../storage/token_storage.dart';
+import '../auth/session_events.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
 
 class ApiClient {
-  ApiClient({
-    required AppConfig config,
-    required TokenStorage tokenStorage,
-  }) {
+  ApiClient({required AppConfig config, required TokenStorage tokenStorage}) {
+    _tokenStorage = tokenStorage;
     _dio = Dio(
       BaseOptions(
         baseUrl: config.baseUrl,
@@ -22,6 +23,7 @@ class ApiClient {
   }
 
   late final Dio _dio;
+  late final TokenStorage _tokenStorage;
 
   Future<ApiResponse<T>> request<T>(
     String path, {
@@ -39,6 +41,7 @@ class ApiClient {
       );
       final result = ApiResponse<T>.fromJson(response.data, parser: parser);
       if (!result.isSuccess) {
+        _notifyIfUnauthorized(result.code);
         throw ApiException(
           statusCode: response.statusCode,
           code: result.code,
@@ -62,11 +65,7 @@ class ApiClient {
     } on ApiException {
       rethrow;
     } on FormatException catch (error) {
-      throw ApiException(
-        statusCode: null,
-        code: null,
-        message: error.message,
-      );
+      throw ApiException(statusCode: null, code: null, message: error.message);
     }
   }
 
@@ -88,12 +87,7 @@ class ApiClient {
     Object? data,
     T Function(dynamic value)? parser,
   }) {
-    return request<T>(
-      path,
-      method: 'POST',
-      data: data,
-      parser: parser,
-    );
+    return request<T>(path, method: 'POST', data: data, parser: parser);
   }
 
   Future<ApiResponse<T>> postMultipart<T>(
@@ -112,6 +106,7 @@ class ApiClient {
       );
       final result = ApiResponse<T>.fromJson(response.data, parser: parser);
       if (!result.isSuccess) {
+        _notifyIfUnauthorized(result.code);
         throw ApiException(
           statusCode: response.statusCode,
           code: result.code,
@@ -138,12 +133,7 @@ class ApiClient {
     Object? data,
     T Function(dynamic value)? parser,
   }) {
-    return request<T>(
-      path,
-      method: 'PUT',
-      data: data,
-      parser: parser,
-    );
+    return request<T>(path, method: 'PUT', data: data, parser: parser);
   }
 
   Future<ApiResponse<T>> delete<T>(
@@ -151,12 +141,7 @@ class ApiClient {
     Object? data,
     T Function(dynamic value)? parser,
   }) {
-    return request<T>(
-      path,
-      method: 'DELETE',
-      data: data,
-      parser: parser,
-    );
+    return request<T>(path, method: 'DELETE', data: data, parser: parser);
   }
 
   String _messageFor(DioException error) {
@@ -168,6 +153,13 @@ class ApiClient {
       return 'Unable to connect to the server';
     }
     return 'Network request failed';
+  }
+
+  void _notifyIfUnauthorized(int? code) {
+    if (code == 401) {
+      unawaited(_tokenStorage.clearToken());
+      SessionEvents.notifyTokenExpired();
+    }
   }
 }
 
@@ -195,6 +187,7 @@ class _AuthInterceptor extends Interceptor {
   ) async {
     if (err.response?.statusCode == 401) {
       await _tokenStorage.clearToken();
+      SessionEvents.notifyTokenExpired();
     }
     handler.next(err);
   }

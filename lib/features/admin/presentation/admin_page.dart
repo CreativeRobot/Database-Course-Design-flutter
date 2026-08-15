@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../data/models/common/page_response.dart';
+import '../../../core/errors/app_error.dart';
 
 import '../../auth/presentation/auth_controller.dart';
 import 'admin_catalog_pages.dart';
@@ -295,7 +297,7 @@ class AdminAsync<T> extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off_outlined, size: 34),
             const SizedBox(height: 10),
-            Text(error.toString(), textAlign: TextAlign.center),
+            Text(appErrorMessage(error), textAlign: TextAlign.center),
             const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: retry,
@@ -307,6 +309,28 @@ class AdminAsync<T> extends StatelessWidget {
       ),
     ),
   );
+}
+
+class AdminPagination extends StatelessWidget {
+  const AdminPagination({required this.page, required this.onPage, super.key});
+  final PageResponse<dynamic> page;
+  final ValueChanged<int> onPage;
+  @override
+  Widget build(BuildContext context) {
+    final totalPages = page.totalPages == 0 ? 1 : page.totalPages;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text('共 ${page.total} 条 · 第 ${page.page}/$totalPages 页', style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+          const SizedBox(width: 10),
+          IconButton(tooltip: '上一页', onPressed: page.page > 1 ? () => onPage(page.page - 1) : null, icon: const Icon(Icons.chevron_left)),
+          IconButton(tooltip: '下一页', onPressed: page.page < totalPages ? () => onPage(page.page + 1) : null, icon: const Icon(Icons.chevron_right)),
+        ],
+      ),
+    );
+  }
 }
 
 Future<bool> confirmAdminAction(
@@ -333,6 +357,22 @@ Future<bool> confirmAdminAction(
     ) ??
     false;
 
-void showAdminMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+void showAdminMessage(BuildContext context, Object message) {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message is String && !message.startsWith('ApiException(')
+              ? message
+              : appErrorMessage(message),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 }
+
+void showAdminError(BuildContext context, Object error) =>
+    showAppError(context, error);

@@ -7,16 +7,17 @@ class AuthRepository {
 
   final ApiClient _apiClient;
 
+  Future<void> validateSession() async {
+    await _apiClient.get<dynamic>(ApiPaths.me, parser: (value) => value);
+  }
+
   Future<AuthSession> login({
     required String username,
     required String password,
   }) async {
     final response = await _apiClient.post<AuthSession>(
       ApiPaths.login,
-      data: {
-        'username': username,
-        'password': password,
-      },
+      data: {'username': username, 'password': password},
       parser: AuthSession.fromJson,
     );
     return response.data;

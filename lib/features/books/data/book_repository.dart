@@ -14,6 +14,13 @@ class BookRepository {
   Future<PageResponse<Book>> getBooks({
     String? keyword,
     int? categoryId,
+    int? authorId,
+    int? publisherId,
+    double? minPrice,
+    double? maxPrice,
+    bool inStock = false,
+    String sortBy = 'latest',
+    String direction = 'desc',
     int page = 1,
     int size = 12,
   }) async {
@@ -23,6 +30,13 @@ class BookRepository {
         if (keyword != null && keyword.trim().isNotEmpty)
           'keyword': keyword.trim(),
         if (categoryId != null) 'categoryId': categoryId,
+        if (authorId != null) 'authorId': authorId,
+        if (publisherId != null) 'publisherId': publisherId,
+        if (minPrice != null) 'minPrice': minPrice,
+        if (maxPrice != null) 'maxPrice': maxPrice,
+        if (inStock) 'inStock': true,
+        'sortBy': sortBy,
+        'direction': direction,
         'page': page,
         'size': size,
       },
@@ -53,10 +67,14 @@ class BookRepository {
     return response.data;
   }
 
-  Future<BookReviewSummary> getReviews(int bookId) async {
+  Future<BookReviewSummary> getReviews(
+    int bookId, {
+    int page = 1,
+    int size = 10,
+  }) async {
     final response = await _apiClient.get<BookReviewSummary>(
       ApiPaths.bookReviews(bookId),
-      queryParameters: const {'page': 1, 'size': 10},
+      queryParameters: {'page': page, 'size': size},
       parser: BookReviewSummary.fromJson,
     );
     return response.data;

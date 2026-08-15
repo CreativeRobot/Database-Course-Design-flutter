@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/network/api_exception.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/book/book.dart';
@@ -105,6 +105,20 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                         },
                       ),
                       const SizedBox(height: 30),
+                      _BookFilters(
+                        sortBy: state.sortBy,
+                        inStock: state.inStock,
+                        minPrice: state.minPrice,
+                        maxPrice: state.maxPrice,
+                        onPrice: (min, max) => ref.read(booksControllerProvider.notifier).loadBooks(minPrice: min, maxPrice: max),
+                        onSort: (value) => ref
+                            .read(booksControllerProvider.notifier)
+                            .loadBooks(sortBy: value),
+                        onStock: (value) => ref
+                            .read(booksControllerProvider.notifier)
+                            .loadBooks(inStock: value),
+                      ),
+                      const SizedBox(height: 18),
                       if (state.errorMessage != null &&
                           state.books.isNotEmpty) ...[
                         _InlineNotice(message: state.errorMessage!),
@@ -156,15 +170,24 @@ class _BooksPageState extends ConsumerState<BooksPage> {
   }
 }
 
-class BookDetailPage extends ConsumerWidget {
+class BookDetailPage extends ConsumerStatefulWidget {
   const BookDetailPage({required this.bookId, super.key});
 
   final int bookId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookDetailPage> createState() => _BookDetailPageState();
+}
+
+class _BookDetailPageState extends ConsumerState<BookDetailPage> {
+  int reviewPage = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final bookId = widget.bookId;
     final detail = ref.watch(bookDetailProvider(bookId));
-    final reviews = ref.watch(bookReviewsProvider(bookId));
+    final reviews = ref.watch(bookReviewsProvider((bookId: bookId, page: reviewPage)));
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     final authState = ref.watch(authControllerProvider);
     final cartState = ref.watch(cartControllerProvider);
@@ -190,12 +213,13 @@ class BookDetailPage extends ConsumerWidget {
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _DetailFailure(
-          message: error is ApiException ? error.message : '图书详情暂时无法加载',
+          message: appErrorMessage(error, fallback: '图书详情暂时无法加载'),
           onRetry: () => ref.invalidate(bookDetailProvider(bookId)),
         ),
         data: (book) => _BookDetailContent(
           book: book,
           reviews: reviews,
+          onLoadMoreReviews: () => setState(() => reviewPage++),
           imageUrl: _coverUrl(baseUrl, book.coverUrl),
           adding: cartState.busyBookIds.contains(bookId),
           onAdd: book.stock <= 0 || book.status != 'ON_SALE'
@@ -225,6 +249,55 @@ class BookDetailPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _BookFilters extends StatelessWidget {
+  const _BookFilters({required this.sortBy, required this.inStock, required this.onSort, required this.onStock, required this.minPrice, required this.maxPrice, required this.onPrice});
+  final String sortBy;
+  final bool inStock;
+  final ValueChanged<String> onSort;
+  final ValueChanged<bool> onStock;
+  final double? minPrice;
+  final double? maxPrice;
+  final void Function(double?, double?) onPrice;
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 12,
+    runSpacing: 8,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      DropdownButton<String>(
+        value: sortBy,
+        items: const [
+          DropdownMenuItem(value: 'latest', child: Text('最新上架')),
+          DropdownMenuItem(value: 'price', child: Text('价格排序')),
+          DropdownMenuItem(value: 'sales', child: Text('销量排序')),
+        ],
+        onChanged: (value) { if (value != null) onSort(value); },
+      ),
+      FilterChip(
+        label: const Text('只看有库存'),
+        selected: inStock,
+        onSelected: onStock,
+      ),
+      SizedBox(
+        width: 110,
+        child: TextField(
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: '最低价', isDense: true),
+          onSubmitted: (value) => onPrice(double.tryParse(value), maxPrice),
+        ),
+      ),
+      SizedBox(
+        width: 110,
+        child: TextField(
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: '最高价', isDense: true),
+          onSubmitted: (value) => onPrice(minPrice, double.tryParse(value)),
+        ),
+      ),
+    ],
+  );
 }
 
 class _BooksHeader extends StatelessWidget {
@@ -677,6 +750,7 @@ class _BookDetailContent extends StatelessWidget {
     required this.imageUrl,
     required this.adding,
     required this.onAdd,
+    required this.onLoadMoreReviews,
   });
 
   final dynamic book;
@@ -684,6 +758,7 @@ class _BookDetailContent extends StatelessWidget {
   final String? imageUrl;
   final bool adding;
   final Future<void> Function()? onAdd;
+  final VoidCallback onLoadMoreReviews;
 
   @override
   Widget build(BuildContext context) {
@@ -744,9 +819,14 @@ class _BookDetailContent extends StatelessWidget {
               reviews.when(
                 loading: () => const _ReviewLoading(),
                 error: (error, _) => _InlineNotice(
-                  message: error is ApiException ? error.message : '评价暂时无法加载',
+                  message: appErrorMessage(error, fallback: '评价暂时无法加载'),
                 ),
-                data: (summary) => _ReviewsPanel(summary: summary),
+                data: (summary) => _ReviewsPanel(
+                  summary: summary,
+                  onLoadMore: summary.reviews.totalPages > summary.reviews.page
+                      ? onLoadMoreReviews
+                      : null,
+                ),
               ),
             ],
           ),
@@ -931,9 +1011,10 @@ class _MetaLine extends StatelessWidget {
 }
 
 class _ReviewsPanel extends StatelessWidget {
-  const _ReviewsPanel({required this.summary});
+  const _ReviewsPanel({required this.summary, this.onLoadMore});
 
   final dynamic summary;
+  final VoidCallback? onLoadMore;
 
   @override
   Widget build(BuildContext context) {
@@ -1041,6 +1122,15 @@ class _ReviewsPanel extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        if (onLoadMore != null)
+          Align(
+            alignment: Alignment.center,
+            child: OutlinedButton.icon(
+              onPressed: onLoadMore,
+              icon: const Icon(Icons.expand_more),
+              label: const Text('加载更多评价'),
             ),
           ),
       ],

@@ -21,8 +21,9 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
   String orderNo = '';
   int? userId;
   String? status;
+  int page = 1;
   AdminOrderFilter get filter =>
-      (orderNo: orderNo, userId: userId, status: status);
+      (orderNo: orderNo, userId: userId, status: status, page: page);
   @override
   void dispose() {
     search.dispose();
@@ -118,11 +119,11 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
             child: AdminAsync(
               value: value,
               retry: _refresh,
-              data: (orders) => orders.isEmpty
+              data: (response) => response.records.isEmpty
                   ? const _OrdersEmpty()
                   : AdminWideTable(
                       child: Column(
-                        children: orders
+                        children: response.records
                             .map(
                               (order) => _OrderRow(
                                 order: order,
@@ -135,6 +136,7 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
                     ),
             ),
           ),
+          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
         ],
       ),
     );
@@ -143,6 +145,7 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
   void _apply() => setState(() {
     orderNo = search.text.trim();
     userId = int.tryParse(userSearch.text.trim());
+    page = 1;
   });
   void _refresh() => ref.invalidate(adminOrdersProvider(filter));
   Future<void> _detail(BookOrder order) async {
@@ -298,8 +301,9 @@ class _AdminReviewsPageState extends ConsumerState<AdminReviewsPage> {
   int? bookId;
   int? userId;
   int? status;
+  int page = 1;
   AdminReviewFilter get filter =>
-      (bookId: bookId, userId: userId, status: status);
+      (bookId: bookId, userId: userId, status: status, page: page);
   @override
   void dispose() {
     bookSearch.dispose();
@@ -376,11 +380,11 @@ class _AdminReviewsPageState extends ConsumerState<AdminReviewsPage> {
             child: AdminAsync(
               value: value,
               retry: _refresh,
-              data: (reviews) => reviews.isEmpty
+              data: (response) => response.records.isEmpty
                   ? const _ReviewsEmpty()
                   : AdminWideTable(
                       child: Column(
-                        children: reviews
+                        children: response.records
                             .map(
                               (review) => _ReviewRow(
                                 review: review,
@@ -392,6 +396,7 @@ class _AdminReviewsPageState extends ConsumerState<AdminReviewsPage> {
                     ),
             ),
           ),
+          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
         ],
       ),
     );
@@ -400,6 +405,7 @@ class _AdminReviewsPageState extends ConsumerState<AdminReviewsPage> {
   void _apply() => setState(() {
     bookId = int.tryParse(bookSearch.text.trim());
     userId = int.tryParse(userSearch.text.trim());
+    page = 1;
   });
   void _refresh() => ref.invalidate(adminReviewsProvider(filter));
   Future<void> _toggle(UserReview review) async {
@@ -486,12 +492,14 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
   String? startTime;
   String? endTime;
   String? type;
+  int page = 1;
   AdminInventoryFilter get filter => (
     bookId: bookId,
     orderId: orderId,
     type: type,
     startTime: startTime,
     endTime: endTime,
+    page: page,
   );
   @override
   void dispose() {
@@ -559,18 +567,19 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
             child: AdminAsync(
               value: value,
               retry: _refresh,
-              data: (logs) => logs.isEmpty
+              data: (response) => response.records.isEmpty
                   ? const _InventoryEmpty()
                   : AdminWideTable(
                       minWidth: 980,
                       child: Column(
-                        children: logs
+                        children: response.records
                             .map((log) => _InventoryRow(log))
                             .toList(),
                       ),
                     ),
             ),
           ),
+          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
         ],
       ),
     );
@@ -597,6 +606,7 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
     orderId = int.tryParse(orderSearch.text.trim());
     startTime = startSearch.text.trim();
     endTime = endSearch.text.trim();
+    page = 1;
   });
   void _refresh() => ref.invalidate(adminInventoryProvider(filter));
 }

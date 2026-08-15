@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../../data/models/book/book.dart';
+import '../../../data/models/common/page_response.dart';
 import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
 import '../data/admin_models.dart';
@@ -18,19 +19,18 @@ final adminStatisticsProvider = FutureProvider.autoDispose<AdminStatistics>((
 });
 
 final adminBooksProvider = FutureProvider.autoDispose
-    .family<List<Book>, String?>((ref, status) async {
-      return (await ref.watch(adminRepositoryProvider).books(status: status))
-          .records;
+    .family<PageResponse<Book>, ({String? status, int page})>((ref, key) async {
+      return ref.watch(adminRepositoryProvider).books(status: key.status, page: key.page);
     });
 
 final adminAuthorsProvider = FutureProvider.autoDispose
-    .family<List<AdminAuthor>, String>((ref, keyword) {
-      return ref.watch(adminRepositoryProvider).authors(keyword: keyword);
+    .family<PageResponse<AdminAuthor>, ({String keyword, int page})>((ref, key) {
+      return ref.watch(adminRepositoryProvider).authors(keyword: key.keyword, page: key.page);
     });
 
 final adminPublishersProvider = FutureProvider.autoDispose
-    .family<List<AdminPublisher>, String>((ref, keyword) {
-      return ref.watch(adminRepositoryProvider).publishers(keyword: keyword);
+    .family<PageResponse<AdminPublisher>, ({String keyword, int page})>((ref, key) {
+      return ref.watch(adminRepositoryProvider).publishers(keyword: key.keyword, page: key.page);
     });
 
 final adminCategoriesProvider = FutureProvider.autoDispose
@@ -38,29 +38,31 @@ final adminCategoriesProvider = FutureProvider.autoDispose
       return ref.watch(adminRepositoryProvider).categories(status: status);
     });
 
-typedef AdminOrderFilter = ({String orderNo, int? userId, String? status});
+typedef AdminOrderFilter = ({String orderNo, int? userId, String? status, int page});
 
 final adminOrdersProvider = FutureProvider.autoDispose
-    .family<List<BookOrder>, AdminOrderFilter>((ref, filter) {
+    .family<PageResponse<BookOrder>, AdminOrderFilter>((ref, filter) {
       return ref
           .watch(adminRepositoryProvider)
           .orders(
             orderNo: filter.orderNo,
             userId: filter.userId,
             status: filter.status,
+            page: filter.page,
           );
     });
 
-typedef AdminReviewFilter = ({int? bookId, int? userId, int? status});
+typedef AdminReviewFilter = ({int? bookId, int? userId, int? status, int page});
 
 final adminReviewsProvider = FutureProvider.autoDispose
-    .family<List<UserReview>, AdminReviewFilter>((ref, filter) {
+    .family<PageResponse<UserReview>, AdminReviewFilter>((ref, filter) {
       return ref
           .watch(adminRepositoryProvider)
           .reviews(
             bookId: filter.bookId,
             userId: filter.userId,
             status: filter.status,
+            page: filter.page,
           );
     });
 
@@ -70,10 +72,11 @@ typedef AdminInventoryFilter = ({
   String? type,
   String? startTime,
   String? endTime,
+  int page,
 });
 
 final adminInventoryProvider = FutureProvider.autoDispose
-    .family<List<InventoryLog>, AdminInventoryFilter>((ref, filter) {
+    .family<PageResponse<InventoryLog>, AdminInventoryFilter>((ref, filter) {
       return ref
           .watch(adminRepositoryProvider)
           .inventoryLogs(
@@ -82,5 +85,6 @@ final adminInventoryProvider = FutureProvider.autoDispose
             type: filter.type,
             startTime: filter.startTime,
             endTime: filter.endTime,
+            page: filter.page,
           );
     });

@@ -16,12 +16,12 @@ class AdminRepository {
     parser: AdminStatistics.fromJson,
   )).data;
 
-  Future<PageResponse<Book>> books({String? status}) async => (await _api.get(
+  Future<PageResponse<Book>> books({String? status, int page = 1, int size = 20}) async => (await _api.get(
     ApiPaths.adminBooks,
     queryParameters: {
       if (status != null) 'status': status,
-      'page': 1,
-      'size': 100,
+      'page': page,
+      'size': size,
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: Book.fromJson),
   )).data;
@@ -60,16 +60,16 @@ class AdminRepository {
         parser: UploadResult.fromJson,
       )).data;
 
-  Future<List<AdminAuthor>> authors({String? keyword}) async => (await _api.get(
+  Future<PageResponse<AdminAuthor>> authors({String? keyword, int page = 1, int size = 20}) async => (await _api.get(
     ApiPaths.adminAuthors,
     queryParameters: {
       if (keyword != null && keyword.trim().isNotEmpty)
         'keyword': keyword.trim(),
-      'page': 1,
-      'size': 100,
+      'page': page,
+      'size': size,
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: AdminAuthor.fromJson),
-  )).data.records;
+  )).data;
   Future<void> saveAuthor(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminAuthors, data: data);
@@ -80,18 +80,18 @@ class AdminRepository {
 
   Future<void> deleteAuthor(int id) => _delete(ApiPaths.adminAuthor(id));
 
-  Future<List<AdminPublisher>> publishers({String? keyword}) async =>
+  Future<PageResponse<AdminPublisher>> publishers({String? keyword, int page = 1, int size = 20}) async =>
       (await _api.get(
         ApiPaths.adminPublishers,
         queryParameters: {
           if (keyword != null && keyword.trim().isNotEmpty)
             'keyword': keyword.trim(),
-          'page': 1,
-          'size': 100,
+          'page': page,
+          'size': size,
         },
         parser: (v) =>
             PageResponse.fromJson(v, itemParser: AdminPublisher.fromJson),
-      )).data.records;
+      )).data;
   Future<void> savePublisher(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminPublishers, data: data);
@@ -125,10 +125,12 @@ class AdminRepository {
 
   Future<void> deleteCategory(int id) => _delete(ApiPaths.adminCategory(id));
 
-  Future<List<BookOrder>> orders({
+  Future<PageResponse<BookOrder>> orders({
     String? orderNo,
     int? userId,
     String? status,
+    int page = 1,
+    int size = 20,
   }) async => (await _api.get(
     ApiPaths.adminOrders,
     queryParameters: {
@@ -136,11 +138,11 @@ class AdminRepository {
         'orderNo': orderNo.trim(),
       if (userId != null) 'userId': userId,
       if (status != null) 'status': status,
-      'page': 1,
-      'size': 100,
+      'page': page,
+      'size': size,
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: BookOrder.fromJson),
-  )).data.records;
+  )).data;
   Future<BookOrder> order(int id) async => (await _api.get(
     ApiPaths.adminOrder(id),
     parser: BookOrder.fromJson,
@@ -149,31 +151,35 @@ class AdminRepository {
     await _api.put(ApiPaths.adminShipOrder(id));
   }
 
-  Future<List<UserReview>> reviews({
+  Future<PageResponse<UserReview>> reviews({
     int? bookId,
     int? userId,
     int? status,
+    int page = 1,
+    int size = 20,
   }) async => (await _api.get(
     ApiPaths.adminReviews,
     queryParameters: {
       if (bookId != null) 'bookId': bookId,
       if (userId != null) 'userId': userId,
       if (status != null) 'status': status,
-      'page': 1,
-      'size': 100,
+      'page': page,
+      'size': size,
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: UserReview.fromJson),
-  )).data.records;
+  )).data;
   Future<void> setReviewStatus(int id, int status) async {
     await _api.put(ApiPaths.adminReviewStatus(id), data: {'status': status});
   }
 
-  Future<List<InventoryLog>> inventoryLogs({
+  Future<PageResponse<InventoryLog>> inventoryLogs({
     int? bookId,
     int? orderId,
     String? type,
     String? startTime,
     String? endTime,
+    int page = 1,
+    int size = 20,
   }) async => (await _api.get(
     ApiPaths.adminInventoryLogs,
     queryParameters: {
@@ -182,11 +188,11 @@ class AdminRepository {
       if (type != null) 'changeType': type,
       if (startTime != null && startTime.isNotEmpty) 'startTime': startTime,
       if (endTime != null && endTime.isNotEmpty) 'endTime': endTime,
-      'page': 1,
-      'size': 100,
+      'page': page,
+      'size': size,
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: InventoryLog.fromJson),
-  )).data.records;
+  )).data;
 
   Future<void> _delete(String path) async {
     await _api.delete<dynamic>(path);

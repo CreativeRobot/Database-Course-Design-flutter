@@ -1,44 +1,30 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/session_events.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../data/auth_repository.dart';
 
-enum AuthStatus {
-  checking,
-  unauthenticated,
-  loading,
-  authenticated,
-}
+enum AuthStatus { checking, unauthenticated, loading, authenticated }
 
 class AuthState {
-  const AuthState({
-    required this.status,
-    this.session,
-    this.errorMessage,
-  });
+  const AuthState({required this.status, this.session, this.errorMessage});
 
   const AuthState.checking() : this(status: AuthStatus.checking);
 
   const AuthState.unauthenticated({String? errorMessage})
-      : this(
-          status: AuthStatus.unauthenticated,
-          errorMessage: errorMessage,
-        );
+    : this(status: AuthStatus.unauthenticated, errorMessage: errorMessage);
 
   const AuthState.loading({AuthSession? session})
-      : this(
-          status: AuthStatus.loading,
-          session: session,
-        );
+    : this(status: AuthStatus.loading, session: session);
 
   const AuthState.authenticated(AuthSession session)
-      : this(
-          status: AuthStatus.authenticated,
-          session: session,
-        );
+    : this(status: AuthStatus.authenticated, session: session);
 
   final AuthStatus status;
   final AuthSession? session;
@@ -65,12 +51,17 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController({
     required AuthRepository repository,
     required TokenStorage tokenStorage,
-  })  : _repository = repository,
-        _tokenStorage = tokenStorage,
-        super(const AuthState.checking());
+  }) : _repository = repository,
+       _tokenStorage = tokenStorage,
+       super(const AuthState.checking()) {
+    _tokenExpiredSubscription = SessionEvents.tokenExpired.listen((_) {
+      unawaited(_handleTokenExpired());
+    });
+  }
 
   final AuthRepository _repository;
   final TokenStorage _tokenStorage;
+  late final StreamSubscription<void> _tokenExpiredSubscription;
 
   Future<void> restoreSession() async {
     final token = await _tokenStorage.readToken();
@@ -79,33 +70,33 @@ class AuthController extends StateNotifier<AuthState> {
       return;
     }
 
-    final savedSession = await _tokenStorage.readSession();
-    if (savedSession != null) {
+    final savedSession =
+        await _tokenStorage.readSession() ??
+        AuthSession(
+          id: 0,
+          username: '',
+          nickname: '',
+          role: 'CUSTOMER',
+          token: token,
+        );
+    try {
+      await _repository.validateSession();
       state = AuthState.authenticated(savedSession);
-      return;
+    } on ApiException catch (error) {
+      if (error.isUnauthorized) {
+        await _handleTokenExpired();
+      } else {
+        // A temporary backend outage should not discard a valid local session.
+        state = AuthState.authenticated(savedSession);
+      }
+    } catch (_) {
+      state = AuthState.authenticated(savedSession);
     }
-
-    // Keep older token-only installations usable after this storage upgrade.
-    state = AuthState.authenticated(
-      AuthSession(
-        id: 0,
-        username: '',
-        nickname: '',
-        role: 'CUSTOMER',
-        token: token,
-      ),
-    );
   }
 
-  Future<bool> login({
-    required String username,
-    required String password,
-  }) {
+  Future<bool> login({required String username, required String password}) {
     return _runAuth(() {
-      return _repository.login(
-        username: username,
-        password: password,
-      );
+      return _repository.login(username: username, password: password);
     });
   }
 
@@ -130,6 +121,12 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await _tokenStorage.clearToken();
     state = const AuthState.unauthenticated();
+  }
+
+  Future<void> _handleTokenExpired() async {
+    if (state.status == AuthStatus.unauthenticated) return;
+    await _tokenStorage.clearToken();
+    state = const AuthState.unauthenticated(errorMessage: '登录已过期，请重新登录');
   }
 
   Future<void> updateNickname(String nickname) async {
@@ -157,16 +154,18 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.authenticated(session);
       return true;
     } on ApiException catch (error) {
-      state = AuthState.unauthenticated(
-        errorMessage: _friendlyMessage(error),
-      );
+      state = AuthState.unauthenticated(errorMessage: _friendlyMessage(error));
       return false;
     } catch (_) {
-      state = const AuthState.unauthenticated(
-        errorMessage: '登录服务暂时不可用，请稍后再试',
-      );
+      state = const AuthState.unauthenticated(errorMessage: '登录服务暂时不可用，请稍后再试');
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    _tokenExpiredSubscription.cancel();
+    super.dispose();
   }
 
   String _friendlyMessage(ApiException error) {
@@ -182,7 +181,7 @@ class AuthController extends StateNotifier<AuthState> {
     if (error.message == 'Connection to server timed out') {
       return '连接服务超时，请稍后再试';
     }
-    return error.message;
+    return appErrorMessage(error);
   }
 }
 
@@ -190,12 +189,13 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(apiClientProvider));
 });
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
-  final controller = AuthController(
-    repository: ref.watch(authRepositoryProvider),
-    tokenStorage: ref.watch(tokenStorageProvider),
-  );
-  controller.restoreSession();
-  return controller;
-});
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    final controller = AuthController(
+      repository: ref.watch(authRepositoryProvider),
+      tokenStorage: ref.watch(tokenStorageProvider),
+    );
+    controller.restoreSession();
+    return controller;
+  },
+);

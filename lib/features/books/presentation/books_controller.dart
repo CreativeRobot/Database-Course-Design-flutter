@@ -17,6 +17,13 @@ class BooksState {
     this.categories = const [],
     this.keyword = '',
     this.categoryId,
+    this.authorId,
+    this.publisherId,
+    this.minPrice,
+    this.maxPrice,
+    this.inStock = false,
+    this.sortBy = 'latest',
+    this.direction = 'desc',
     this.page = 1,
     this.total = 0,
     this.totalPages = 0,
@@ -28,6 +35,13 @@ class BooksState {
   final List<BookCategory> categories;
   final String keyword;
   final int? categoryId;
+  final int? authorId;
+  final int? publisherId;
+  final double? minPrice;
+  final double? maxPrice;
+  final bool inStock;
+  final String sortBy;
+  final String direction;
   final int page;
   final int total;
   final int totalPages;
@@ -42,6 +56,13 @@ class BooksState {
     String? keyword,
     int? categoryId,
     bool clearCategory = false,
+    int? authorId,
+    int? publisherId,
+    double? minPrice,
+    double? maxPrice,
+    bool? inStock,
+    String? sortBy,
+    String? direction,
     int? page,
     int? total,
     int? totalPages,
@@ -54,6 +75,13 @@ class BooksState {
       categories: categories ?? this.categories,
       keyword: keyword ?? this.keyword,
       categoryId: clearCategory ? null : categoryId ?? this.categoryId,
+      authorId: authorId ?? this.authorId,
+      publisherId: publisherId ?? this.publisherId,
+      minPrice: minPrice ?? this.minPrice,
+      maxPrice: maxPrice ?? this.maxPrice,
+      inStock: inStock ?? this.inStock,
+      sortBy: sortBy ?? this.sortBy,
+      direction: direction ?? this.direction,
       page: page ?? this.page,
       total: total ?? this.total,
       totalPages: totalPages ?? this.totalPages,
@@ -78,6 +106,13 @@ class BooksController extends StateNotifier<BooksState> {
     String? keyword,
     int? categoryId,
     bool clearCategory = false,
+    int? authorId,
+    int? publisherId,
+    double? minPrice,
+    double? maxPrice,
+    bool? inStock,
+    String? sortBy,
+    String? direction,
   }) async {
     final nextKeyword = keyword ?? state.keyword;
     final nextCategoryId = clearCategory
@@ -90,11 +125,32 @@ class BooksController extends StateNotifier<BooksState> {
       categoryId: nextCategoryId,
       clearCategory: clearCategory,
       clearError: true,
+      authorId: authorId,
+      publisherId: publisherId,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      inStock: inStock,
+      sortBy: sortBy,
+      direction: direction,
     );
     try {
       final result = await _repository.getBooks(
         keyword: nextKeyword,
         categoryId: nextCategoryId,
+        authorId: state.authorId,
+        publisherId: state.publisherId,
+        minPrice: state.minPrice,
+        maxPrice: state.maxPrice,
+        inStock: state.inStock,
+        sortBy: state.sortBy,
+        direction: state.direction,
+        authorId: state.authorId,
+        publisherId: state.publisherId,
+        minPrice: state.minPrice,
+        maxPrice: state.maxPrice,
+        inStock: state.inStock,
+        sortBy: state.sortBy,
+        direction: state.direction,
       );
       state = state.copyWith(
         status: BooksStatus.success,
@@ -126,6 +182,20 @@ class BooksController extends StateNotifier<BooksState> {
       final result = await _repository.getBooks(
         keyword: state.keyword,
         categoryId: state.categoryId,
+        authorId: state.authorId,
+        publisherId: state.publisherId,
+        minPrice: state.minPrice,
+        maxPrice: state.maxPrice,
+        inStock: state.inStock,
+        sortBy: state.sortBy,
+        direction: state.direction,
+        authorId: state.authorId,
+        publisherId: state.publisherId,
+        minPrice: state.minPrice,
+        maxPrice: state.maxPrice,
+        inStock: state.inStock,
+        sortBy: state.sortBy,
+        direction: state.direction,
         page: state.page + 1,
       );
       state = state.copyWith(
@@ -179,6 +249,6 @@ final bookDetailProvider = FutureProvider.autoDispose.family<BookDetail, int>((
 });
 
 final bookReviewsProvider = FutureProvider.autoDispose
-    .family<BookReviewSummary, int>((ref, bookId) {
-      return ref.watch(bookRepositoryProvider).getReviews(bookId);
+    .family<BookReviewSummary, ({int bookId, int page})>((ref, key) {
+      return ref.watch(bookRepositoryProvider).getReviews(key.bookId, page: key.page);
     });

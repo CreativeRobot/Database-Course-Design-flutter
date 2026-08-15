@@ -2,8 +2,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/app_error.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
+import '../../../data/models/common/page_response.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../data/admin_models.dart';
 import '../data/admin_repository.dart';
@@ -18,9 +20,10 @@ class AdminBooksPage extends ConsumerStatefulWidget {
 
 class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
   String? _status;
+  int _page = 1;
   @override
   Widget build(BuildContext context) {
-    final value = ref.watch(adminBooksProvider(_status));
+    final value = ref.watch(adminBooksProvider((status: _status, page: _page)));
     return AdminPageBody(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,12 +48,12 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
             child: AdminAsync(
               value: value,
               retry: _refresh,
-              data: (books) => books.isEmpty
+              data: (page) => page.records.isEmpty
                   ? const _Empty(text: '暂无图书')
                   : AdminWideTable(
                       child: Column(
                         children: [
-                          for (final book in books)
+                          for (final book in page.records)
                             _BookRow(
                               book: book,
                               onEdit: () => _edit(book),
@@ -62,12 +65,13 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
                     ),
             ),
           ),
+          value.when(data: (page) => AdminPagination(page: page, onPage: (p) => setState(() => _page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
         ],
       ),
     );
   }
 
-  void _refresh() => ref.invalidate(adminBooksProvider(_status));
+  void _refresh() => ref.invalidate(adminBooksProvider((status: _status, page: _page)));
 
   Future<void> _edit([Book? book]) async {
     final repo = ref.read(adminRepositoryProvider);
@@ -84,8 +88,8 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
         barrierDismissible: false,
         builder: (_) => _BookDialog(
           repository: repo,
-          authors: results[0] as List<AdminAuthor>,
-          publishers: results[1] as List<AdminPublisher>,
+          authors: (results[0] as PageResponse<AdminAuthor>).records,
+          publishers: (results[1] as PageResponse<AdminPublisher>).records,
           categories: results[2] as List<AdminCategory>,
           book: book == null ? null : results[3] as BookDetail,
         ),
@@ -444,7 +448,7 @@ class _BookDialogState extends State<_BookDialog> {
       final uploaded = await widget.repository.upload(file!.bytes!, file.name);
       _fields['cover']!.text = uploaded.url;
     } catch (error) {
-      setState(() => _error = error.toString());
+        setState(() => _error = appErrorMessage(error));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -488,7 +492,7 @@ class _BookDialogState extends State<_BookDialog> {
     } catch (error) {
       setState(() {
         _saving = false;
-        _error = error.toString();
+      _error = appErrorMessage(error);
       });
     }
   }
@@ -576,15 +580,17 @@ class AdminAuthorsPage extends ConsumerStatefulWidget {
 
 class _AdminAuthorsPageState extends ConsumerState<AdminAuthorsPage> {
   String keyword = '';
+  int page = 1;
   @override
   Widget build(BuildContext context) => _SimpleEntityPage<AdminAuthor>(
     title: '作者管理',
-    value: ref.watch(adminAuthorsProvider(keyword)),
+    value: ref.watch(adminAuthorsProvider((keyword: keyword, page: page))),
     name: (e) => e.name,
     subtitle: (e) =>
         [e.country, e.introduction].where((e) => e.isNotEmpty).join(' · '),
-    onSearch: (v) => setState(() => keyword = v),
-    onRefresh: () => ref.invalidate(adminAuthorsProvider(keyword)),
+    onSearch: (v) => setState(() { keyword = v; page = 1; }),
+    onPage: (v) => setState(() => page = v),
+    onRefresh: () => ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page))),
     onEdit: _edit,
     onDelete: _delete,
   );
@@ -596,7 +602,7 @@ class _AdminAuthorsPageState extends ConsumerState<AdminAuthorsPage> {
     if (data == null) return;
     try {
       await ref.read(adminRepositoryProvider).saveAuthor(data, id: value?.id);
-      ref.invalidate(adminAuthorsProvider(keyword));
+      ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page)));
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
@@ -611,7 +617,7 @@ class _AdminAuthorsPageState extends ConsumerState<AdminAuthorsPage> {
       return;
     try {
       await ref.read(adminRepositoryProvider).deleteAuthor(value.id);
-      ref.invalidate(adminAuthorsProvider(keyword));
+      ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page)));
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
@@ -627,15 +633,17 @@ class AdminPublishersPage extends ConsumerStatefulWidget {
 
 class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
   String keyword = '';
+  int page = 1;
   @override
   Widget build(BuildContext context) => _SimpleEntityPage<AdminPublisher>(
     title: '出版社管理',
-    value: ref.watch(adminPublishersProvider(keyword)),
+    value: ref.watch(adminPublishersProvider((keyword: keyword, page: page))),
     name: (e) => e.name,
     subtitle: (e) =>
         [e.phone, e.address].where((e) => e.isNotEmpty).join(' · '),
-    onSearch: (v) => setState(() => keyword = v),
-    onRefresh: () => ref.invalidate(adminPublishersProvider(keyword)),
+    onSearch: (v) => setState(() { keyword = v; page = 1; }),
+    onPage: (v) => setState(() => page = v),
+    onRefresh: () => ref.invalidate(adminPublishersProvider((keyword: keyword, page: page))),
     onEdit: _edit,
     onDelete: _delete,
   );
@@ -649,7 +657,7 @@ class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
       await ref
           .read(adminRepositoryProvider)
           .savePublisher(data, id: value?.id);
-      ref.invalidate(adminPublishersProvider(keyword));
+      ref.invalidate(adminPublishersProvider((keyword: keyword, page: page)));
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
@@ -664,7 +672,7 @@ class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
       return;
     try {
       await ref.read(adminRepositoryProvider).deletePublisher(value.id);
-      ref.invalidate(adminPublishersProvider(keyword));
+      ref.invalidate(adminPublishersProvider((keyword: keyword, page: page)));
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
@@ -805,15 +813,17 @@ class _SimpleEntityPage<T> extends StatelessWidget {
     required this.name,
     required this.subtitle,
     required this.onSearch,
+    required this.onPage,
     required this.onRefresh,
     required this.onEdit,
     required this.onDelete,
   });
   final String title;
-  final AsyncValue<List<T>> value;
+  final AsyncValue<PageResponse<T>> value;
   final String Function(T) name;
   final String Function(T) subtitle;
   final ValueChanged<String> onSearch;
+  final ValueChanged<int> onPage;
   final VoidCallback onRefresh;
   final void Function([T?]) onEdit;
   final ValueChanged<T> onDelete;
@@ -844,10 +854,11 @@ class _SimpleEntityPage<T> extends StatelessWidget {
           child: AdminAsync(
             value: value,
             retry: onRefresh,
-            data: (items) => items.isEmpty
+            data: (page) => page.records.isEmpty
                 ? const _Empty(text: '暂无数据')
                 : Column(
-                    children: items
+                    children: [
+                      ...page.records
                         .map(
                           (item) => ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -879,6 +890,8 @@ class _SimpleEntityPage<T> extends StatelessWidget {
                           ),
                         )
                         .toList(),
+                      AdminPagination(page: page, onPage: onPage),
+                    ],
                   ),
           ),
         ),
