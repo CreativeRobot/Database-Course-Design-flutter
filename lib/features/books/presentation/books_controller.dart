@@ -6,6 +6,7 @@ import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/book/book_review.dart';
 import '../../../data/models/book/category.dart';
+import '../../../data/models/book/book_filter_option.dart';
 import '../data/book_repository.dart';
 
 enum BooksStatus { initial, loading, refreshing, success, failure }
@@ -15,6 +16,8 @@ class BooksState {
     this.status = BooksStatus.initial,
     this.books = const [],
     this.categories = const [],
+    this.authors = const [],
+    this.publishers = const [],
     this.keyword = '',
     this.categoryId,
     this.authorId,
@@ -33,6 +36,8 @@ class BooksState {
   final BooksStatus status;
   final List<Book> books;
   final List<BookCategory> categories;
+  final List<BookFilterOption> authors;
+  final List<BookFilterOption> publishers;
   final String keyword;
   final int? categoryId;
   final int? authorId;
@@ -53,9 +58,13 @@ class BooksState {
     BooksStatus? status,
     List<Book>? books,
     List<BookCategory>? categories,
+    List<BookFilterOption>? authors,
+    List<BookFilterOption>? publishers,
     String? keyword,
     int? categoryId,
     bool clearCategory = false,
+    bool clearAuthor = false,
+    bool clearPublisher = false,
     int? authorId,
     int? publisherId,
     double? minPrice,
@@ -73,10 +82,12 @@ class BooksState {
       status: status ?? this.status,
       books: books ?? this.books,
       categories: categories ?? this.categories,
+      authors: authors ?? this.authors,
+      publishers: publishers ?? this.publishers,
       keyword: keyword ?? this.keyword,
       categoryId: clearCategory ? null : categoryId ?? this.categoryId,
-      authorId: authorId ?? this.authorId,
-      publisherId: publisherId ?? this.publisherId,
+      authorId: clearAuthor ? null : authorId ?? this.authorId,
+      publisherId: clearPublisher ? null : publisherId ?? this.publisherId,
       minPrice: minPrice ?? this.minPrice,
       maxPrice: maxPrice ?? this.maxPrice,
       inStock: inStock ?? this.inStock,
@@ -99,13 +110,15 @@ class BooksController extends StateNotifier<BooksState> {
     if (state.status != BooksStatus.initial) {
       return;
     }
-    await Future.wait([loadBooks(), loadCategories()]);
+    await Future.wait([loadBooks(), loadCategories(), loadAuthors(), loadPublishers()]);
   }
 
   Future<void> loadBooks({
     String? keyword,
     int? categoryId,
     bool clearCategory = false,
+    bool clearAuthor = false,
+    bool clearPublisher = false,
     int? authorId,
     int? publisherId,
     double? minPrice,
@@ -124,6 +137,8 @@ class BooksController extends StateNotifier<BooksState> {
       keyword: nextKeyword,
       categoryId: nextCategoryId,
       clearCategory: clearCategory,
+      clearAuthor: clearAuthor,
+      clearPublisher: clearPublisher,
       clearError: true,
       authorId: authorId,
       publisherId: publisherId,
@@ -137,13 +152,6 @@ class BooksController extends StateNotifier<BooksState> {
       final result = await _repository.getBooks(
         keyword: nextKeyword,
         categoryId: nextCategoryId,
-        authorId: state.authorId,
-        publisherId: state.publisherId,
-        minPrice: state.minPrice,
-        maxPrice: state.maxPrice,
-        inStock: state.inStock,
-        sortBy: state.sortBy,
-        direction: state.direction,
         authorId: state.authorId,
         publisherId: state.publisherId,
         minPrice: state.minPrice,
@@ -189,13 +197,6 @@ class BooksController extends StateNotifier<BooksState> {
         inStock: state.inStock,
         sortBy: state.sortBy,
         direction: state.direction,
-        authorId: state.authorId,
-        publisherId: state.publisherId,
-        minPrice: state.minPrice,
-        maxPrice: state.maxPrice,
-        inStock: state.inStock,
-        sortBy: state.sortBy,
-        direction: state.direction,
         page: state.page + 1,
       );
       state = state.copyWith(
@@ -218,6 +219,22 @@ class BooksController extends StateNotifier<BooksState> {
       state = state.copyWith(errorMessage: _friendlyMessage(error));
     } catch (_) {
       state = state.copyWith(errorMessage: '分类暂时无法加载');
+    }
+  }
+
+  Future<void> loadAuthors() async {
+    try {
+      state = state.copyWith(authors: await _repository.getAuthors());
+    } on ApiException catch (error) {
+      state = state.copyWith(errorMessage: _friendlyMessage(error));
+    }
+  }
+
+  Future<void> loadPublishers() async {
+    try {
+      state = state.copyWith(publishers: await _repository.getPublishers());
+    } on ApiException catch (error) {
+      state = state.copyWith(errorMessage: _friendlyMessage(error));
     }
   }
 

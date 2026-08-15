@@ -4,6 +4,7 @@ import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/book/book_review.dart';
 import '../../../data/models/book/category.dart';
+import '../../../data/models/book/book_filter_option.dart';
 import '../../../data/models/common/page_response.dart';
 
 class BookRepository {
@@ -57,6 +58,19 @@ class BookRepository {
       },
     );
     return response.data;
+  }
+
+  Future<List<BookFilterOption>> getAuthors() async => _getOptions(ApiPaths.authors);
+
+  Future<List<BookFilterOption>> getPublishers() async => _getOptions(ApiPaths.publishers);
+
+  Future<List<BookFilterOption>> _getOptions(String path) async {
+    final response = await _apiClient.get<PageResponse<BookFilterOption>>(
+      path,
+      queryParameters: const {'page': 1, 'size': 100},
+      parser: (value) => PageResponse.fromJson(value, itemParser: BookFilterOption.fromJson),
+    );
+    return response.data.records;
   }
 
   Future<BookDetail> getBookDetail(int bookId) async {
