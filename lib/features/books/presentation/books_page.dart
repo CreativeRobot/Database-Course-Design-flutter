@@ -133,10 +133,10 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                       ],
                       if (state.status == BooksStatus.loading &&
                           state.books.isEmpty)
-                        const _BooksLoading()
+                        const CommerceLoadingState(message: '正在加载图书')
                       else if (state.status == BooksStatus.failure &&
                           state.books.isEmpty)
-                        _BooksFailure(
+                        CommerceErrorState(
                           message: state.errorMessage ?? '图书暂时无法加载',
                           onRetry: () => ref
                               .read(booksControllerProvider.notifier)
@@ -188,6 +188,21 @@ class BookDetailPage extends ConsumerStatefulWidget {
 
 class _BookDetailPageState extends ConsumerState<BookDetailPage> {
   int reviewPage = 1;
+  final _loadedReviewIds = <int>{};
+  final _loadedReviews = <BookReview>[];
+  BookReviewSummary? _lastReviewSummary;
+
+  void _mergeReviews(BookReviewSummary summary) {
+    _lastReviewSummary = summary;
+    var changed = false;
+    for (final review in summary.reviews.records) {
+      if (_loadedReviewIds.add(review.id)) {
+        _loadedReviews.add(review);
+        changed = true;
+      }
+    }
+    if (changed && mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +210,11 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
     final bookId = widget.bookId;
     final detail = ref.watch(bookDetailProvider(bookId));
     final reviews = ref.watch(bookReviewsProvider((bookId: bookId, page: reviewPage)));
+    reviews.whenData((summary) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _mergeReviews(summary);
+      });
+    });
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     final authState = ref.watch(authControllerProvider);
     final cartState = ref.watch(cartControllerProvider);
@@ -226,7 +246,12 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
         data: (book) => _BookDetailContent(
           book: book,
           reviews: reviews,
+          loadedReviews: _loadedReviews,
+          cachedReviewSummary: _lastReviewSummary,
           onLoadMoreReviews: () => setState(() => reviewPage++),
+          onRetryReviews: () => ref.invalidate(
+            bookReviewsProvider((bookId: bookId, page: reviewPage)),
+          ),
           imageUrl: _coverUrl(baseUrl, book.coverUrl),
           adding: cartState.busyBookIds.contains(bookId),
           onAdd: book.stock <= 0 || book.status != 'ON_SALE'
@@ -778,18 +803,24 @@ class _BookDetailContent extends StatelessWidget {
   const _BookDetailContent({
     required this.book,
     required this.reviews,
+    required this.loadedReviews,
+    required this.cachedReviewSummary,
     required this.imageUrl,
     required this.adding,
     required this.onAdd,
     required this.onLoadMoreReviews,
+    required this.onRetryReviews,
   });
 
   final dynamic book;
   final AsyncValue<dynamic> reviews;
+  final List<BookReview> loadedReviews;
+  final BookReviewSummary? cachedReviewSummary;
   final String? imageUrl;
   final bool adding;
   final Future<void> Function()? onAdd;
   final VoidCallback onLoadMoreReviews;
+  final VoidCallback onRetryReviews;
 
   @override
   Widget build(BuildContext context) {
@@ -848,12 +879,19 @@ class _BookDetailContent extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               reviews.when(
-                loading: () => const _ReviewLoading(),
-                error: (error, _) => _InlineNotice(
+                loading: () => cachedReviewSummary == null
+                    ? const _ReviewLoading()
+                    : _ReviewsPanel(
+                        summary: cachedReviewSummary!,
+                        reviewsOverride: loadedReviews,
+                      ),
+                error: (error, _) => CommerceErrorState(
                   message: appErrorMessage(error, fallback: '评价暂时无法加载'),
+                  onRetry: onRetryReviews,
                 ),
                 data: (summary) => _ReviewsPanel(
                   summary: summary,
+                  reviewsOverride: loadedReviews.isEmpty ? null : loadedReviews,
                   onLoadMore: summary.reviews.totalPages > summary.reviews.page
                       ? onLoadMoreReviews
                       : null,
@@ -1042,14 +1080,15 @@ class _MetaLine extends StatelessWidget {
 }
 
 class _ReviewsPanel extends StatelessWidget {
-  const _ReviewsPanel({required this.summary, this.onLoadMore});
+  const _ReviewsPanel({required this.summary, this.onLoadMore, this.reviewsOverride});
 
   final dynamic summary;
   final VoidCallback? onLoadMore;
+  final List<BookReview>? reviewsOverride;
 
   @override
   Widget build(BuildContext context) {
-    final reviews = summary.reviews.records as List;
+    final reviews = reviewsOverride ?? (summary.reviews.records as List<BookReview>);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

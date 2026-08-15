@@ -65,10 +65,10 @@ class _CartPageState extends ConsumerState<CartPage> {
                           ],
                           if (state.status == CartStatus.loading &&
                               cart.items.isEmpty)
-                            const _CartLoading()
+                            const CommerceLoadingState(message: '正在加载购物袋')
                           else if (state.status == CartStatus.failure &&
                               cart.items.isEmpty)
-                            _CartFailure(
+                            CommerceErrorState(
                               message: state.errorMessage ?? '购物车暂时无法加载',
                               onRetry: controller.loadCart,
                             )

@@ -258,14 +258,14 @@ final booksControllerProvider =
       return BooksController(ref.watch(bookRepositoryProvider));
     });
 
-final bookDetailProvider = FutureProvider.autoDispose.family<BookDetail, int>((
+final bookDetailProvider = FutureProvider.family<BookDetail, int>((
   ref,
   bookId,
 ) {
   return ref.watch(bookRepositoryProvider).getBookDetail(bookId);
 });
 
-final bookReviewsProvider = FutureProvider.autoDispose
+final bookReviewsProvider = FutureProvider
     .family<BookReviewSummary, ({int bookId, int page})>((ref, key) {
       return ref.watch(bookRepositoryProvider).getReviews(key.bookId, page: key.page);
     });

@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/app_error.dart';
+
 abstract final class CommerceColors {
   static const canvas = Color(0xFFF7F6F2);
   static const ink = Color(0xFF171717);
@@ -141,7 +143,7 @@ class CommerceHeader extends StatelessWidget {
 class CommerceLoadingState extends StatelessWidget {
   const CommerceLoadingState({this.message = '正在加载', super.key});
 
-  final String message;
+  final Object message;
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +183,7 @@ class CommerceErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off_outlined, size: 40),
             const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center),
+            Text(appErrorMessage(message, fallback: '暂时无法加载，请稍后重试'), textAlign: TextAlign.center),
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: onRetry,
