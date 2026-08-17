@@ -20,17 +20,29 @@ final adminStatisticsProvider = FutureProvider.autoDispose<AdminStatistics>((
 
 final adminBooksProvider = FutureProvider.autoDispose
     .family<PageResponse<Book>, ({String? status, int page})>((ref, key) async {
-      return ref.watch(adminRepositoryProvider).books(status: key.status, page: key.page);
+      return ref
+          .watch(adminRepositoryProvider)
+          .books(status: key.status, page: key.page);
     });
 
 final adminAuthorsProvider = FutureProvider.autoDispose
-    .family<PageResponse<AdminAuthor>, ({String keyword, int page})>((ref, key) {
-      return ref.watch(adminRepositoryProvider).authors(keyword: key.keyword, page: key.page);
+    .family<PageResponse<AdminAuthor>, ({String keyword, int page})>((
+      ref,
+      key,
+    ) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .authors(keyword: key.keyword, page: key.page);
     });
 
 final adminPublishersProvider = FutureProvider.autoDispose
-    .family<PageResponse<AdminPublisher>, ({String keyword, int page})>((ref, key) {
-      return ref.watch(adminRepositoryProvider).publishers(keyword: key.keyword, page: key.page);
+    .family<PageResponse<AdminPublisher>, ({String keyword, int page})>((
+      ref,
+      key,
+    ) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .publishers(keyword: key.keyword, page: key.page);
     });
 
 final adminCategoriesProvider = FutureProvider.autoDispose
@@ -38,7 +50,12 @@ final adminCategoriesProvider = FutureProvider.autoDispose
       return ref.watch(adminRepositoryProvider).categories(status: status);
     });
 
-typedef AdminOrderFilter = ({String orderNo, int? userId, String? status, int page});
+typedef AdminOrderFilter = ({
+  String orderNo,
+  int? userId,
+  String? status,
+  int page,
+});
 
 final adminOrdersProvider = FutureProvider.autoDispose
     .family<PageResponse<BookOrder>, AdminOrderFilter>((ref, filter) {

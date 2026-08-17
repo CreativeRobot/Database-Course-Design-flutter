@@ -143,7 +143,7 @@ class CommerceHeader extends StatelessWidget {
 class CommerceLoadingState extends StatelessWidget {
   const CommerceLoadingState({this.message = '正在加载', super.key});
 
-  final Object message;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +183,10 @@ class CommerceErrorState extends StatelessWidget {
           children: [
             const Icon(Icons.cloud_off_outlined, size: 40),
             const SizedBox(height: 14),
-            Text(appErrorMessage(message, fallback: '暂时无法加载，请稍后重试'), textAlign: TextAlign.center),
+            Text(
+              appErrorMessage(message, fallback: '暂时无法加载，请稍后重试'),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: onRetry,

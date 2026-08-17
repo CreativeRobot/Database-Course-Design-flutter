@@ -16,7 +16,11 @@ class AdminRepository {
     parser: AdminStatistics.fromJson,
   )).data;
 
-  Future<PageResponse<Book>> books({String? status, int page = 1, int size = 20}) async => (await _api.get(
+  Future<PageResponse<Book>> books({
+    String? status,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
     ApiPaths.adminBooks,
     queryParameters: {
       if (status != null) 'status': status,
@@ -60,7 +64,11 @@ class AdminRepository {
         parser: UploadResult.fromJson,
       )).data;
 
-  Future<PageResponse<AdminAuthor>> authors({String? keyword, int page = 1, int size = 20}) async => (await _api.get(
+  Future<PageResponse<AdminAuthor>> authors({
+    String? keyword,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
     ApiPaths.adminAuthors,
     queryParameters: {
       if (keyword != null && keyword.trim().isNotEmpty)
@@ -80,18 +88,21 @@ class AdminRepository {
 
   Future<void> deleteAuthor(int id) => _delete(ApiPaths.adminAuthor(id));
 
-  Future<PageResponse<AdminPublisher>> publishers({String? keyword, int page = 1, int size = 20}) async =>
-      (await _api.get(
-        ApiPaths.adminPublishers,
-        queryParameters: {
-          if (keyword != null && keyword.trim().isNotEmpty)
-            'keyword': keyword.trim(),
-          'page': page,
-          'size': size,
-        },
-        parser: (v) =>
-            PageResponse.fromJson(v, itemParser: AdminPublisher.fromJson),
-      )).data;
+  Future<PageResponse<AdminPublisher>> publishers({
+    String? keyword,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
+    ApiPaths.adminPublishers,
+    queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
+      'page': page,
+      'size': size,
+    },
+    parser: (v) =>
+        PageResponse.fromJson(v, itemParser: AdminPublisher.fromJson),
+  )).data;
   Future<void> savePublisher(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminPublishers, data: data);

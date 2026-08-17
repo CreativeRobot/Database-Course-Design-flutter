@@ -29,17 +29,17 @@ class BookReviewSummary {
   final PageResponse<BookReview> reviews;
 
   BookReviewSummary withReviews(List<BookReview> records) => BookReviewSummary(
-        bookId: bookId,
-        averageRating: averageRating,
-        reviewCount: reviewCount,
-        reviews: PageResponse(
-          records: records,
-          total: reviews.total,
-          page: reviews.page,
-          size: reviews.size,
-          totalPages: reviews.totalPages,
-        ),
-      );
+    bookId: bookId,
+    averageRating: averageRating,
+    reviewCount: reviewCount,
+    reviews: PageResponse(
+      records: records,
+      total: reviews.total,
+      page: reviews.page,
+      size: reviews.size,
+      totalPages: reviews.totalPages,
+    ),
+  );
 }
 
 class BookReview {

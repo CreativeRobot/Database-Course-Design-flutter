@@ -136,7 +136,14 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
                     ),
             ),
           ),
-          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
+          value.when(
+            data: (response) => AdminPagination(
+              page: response,
+              onPage: (p) => setState(() => page = p),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -396,7 +403,14 @@ class _AdminReviewsPageState extends ConsumerState<AdminReviewsPage> {
                     ),
             ),
           ),
-          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
+          value.when(
+            data: (response) => AdminPagination(
+              page: response,
+              onPage: (p) => setState(() => page = p),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -579,7 +593,14 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
                     ),
             ),
           ),
-          value.when(data: (response) => AdminPagination(page: response, onPage: (p) => setState(() => page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
+          value.when(
+            data: (response) => AdminPagination(
+              page: response,
+              onPage: (p) => setState(() => page = p),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
     );

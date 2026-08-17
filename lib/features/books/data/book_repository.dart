@@ -60,15 +60,18 @@ class BookRepository {
     return response.data;
   }
 
-  Future<List<BookFilterOption>> getAuthors() async => _getOptions(ApiPaths.authors);
+  Future<List<BookFilterOption>> getAuthors() async =>
+      _getOptions(ApiPaths.authors);
 
-  Future<List<BookFilterOption>> getPublishers() async => _getOptions(ApiPaths.publishers);
+  Future<List<BookFilterOption>> getPublishers() async =>
+      _getOptions(ApiPaths.publishers);
 
   Future<List<BookFilterOption>> _getOptions(String path) async {
     final response = await _apiClient.get<PageResponse<BookFilterOption>>(
       path,
       queryParameters: const {'page': 1, 'size': 100},
-      parser: (value) => PageResponse.fromJson(value, itemParser: BookFilterOption.fromJson),
+      parser: (value) =>
+          PageResponse.fromJson(value, itemParser: BookFilterOption.fromJson),
     );
     return response.data.records;
   }

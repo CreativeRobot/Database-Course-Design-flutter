@@ -9,9 +9,11 @@ import '../../../core/providers.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_filter_option.dart';
+import '../../../data/models/book/book_review.dart';
 import '../../../data/models/book/category.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
+import '../../cart/presentation/commerce_widgets.dart';
 import 'books_controller.dart';
 
 class BooksPage extends ConsumerStatefulWidget {
@@ -113,11 +115,23 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                         publishers: state.publishers,
                         authorId: state.authorId,
                         publisherId: state.publisherId,
-                        onAuthor: (value) => ref.read(booksControllerProvider.notifier).loadBooks(authorId: value, clearAuthor: value == null),
-                        onPublisher: (value) => ref.read(booksControllerProvider.notifier).loadBooks(publisherId: value, clearPublisher: value == null),
+                        onAuthor: (value) => ref
+                            .read(booksControllerProvider.notifier)
+                            .loadBooks(
+                              authorId: value,
+                              clearAuthor: value == null,
+                            ),
+                        onPublisher: (value) => ref
+                            .read(booksControllerProvider.notifier)
+                            .loadBooks(
+                              publisherId: value,
+                              clearPublisher: value == null,
+                            ),
                         minPrice: state.minPrice,
                         maxPrice: state.maxPrice,
-                        onPrice: (min, max) => ref.read(booksControllerProvider.notifier).loadBooks(minPrice: min, maxPrice: max),
+                        onPrice: (min, max) => ref
+                            .read(booksControllerProvider.notifier)
+                            .loadBooks(minPrice: min, maxPrice: max),
                         onSort: (value) => ref
                             .read(booksControllerProvider.notifier)
                             .loadBooks(sortBy: value),
@@ -209,7 +223,9 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
     final ref = this.ref;
     final bookId = widget.bookId;
     final detail = ref.watch(bookDetailProvider(bookId));
-    final reviews = ref.watch(bookReviewsProvider((bookId: bookId, page: reviewPage)));
+    final reviews = ref.watch(
+      bookReviewsProvider((bookId: bookId, page: reviewPage)),
+    );
     reviews.whenData((summary) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _mergeReviews(summary);
@@ -284,7 +300,21 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
 }
 
 class _BookFilters extends StatelessWidget {
-  const _BookFilters({required this.sortBy, required this.inStock, required this.onSort, required this.onStock, required this.minPrice, required this.maxPrice, required this.onPrice, required this.authors, required this.publishers, required this.authorId, required this.publisherId, required this.onAuthor, required this.onPublisher});
+  const _BookFilters({
+    required this.sortBy,
+    required this.inStock,
+    required this.onSort,
+    required this.onStock,
+    required this.minPrice,
+    required this.maxPrice,
+    required this.onPrice,
+    required this.authors,
+    required this.publishers,
+    required this.authorId,
+    required this.publisherId,
+    required this.onAuthor,
+    required this.onPublisher,
+  });
   final String sortBy;
   final bool inStock;
   final ValueChanged<String> onSort;
@@ -311,14 +341,18 @@ class _BookFilters extends StatelessWidget {
           DropdownMenuItem(value: 'price', child: Text('价格排序')),
           DropdownMenuItem(value: 'sales', child: Text('销量排序')),
         ],
-        onChanged: (value) { if (value != null) onSort(value); },
+        onChanged: (value) {
+          if (value != null) onSort(value);
+        },
       ),
       DropdownButton<int?>(
         value: authorId,
         hint: const Text('全部作者'),
         items: [
           const DropdownMenuItem<int?>(value: null, child: Text('全部作者')),
-          ...authors.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name))),
+          ...authors.map(
+            (item) => DropdownMenuItem(value: item.id, child: Text(item.name)),
+          ),
         ],
         onChanged: onAuthor,
       ),
@@ -327,7 +361,9 @@ class _BookFilters extends StatelessWidget {
         hint: const Text('全部出版社'),
         items: [
           const DropdownMenuItem<int?>(value: null, child: Text('全部出版社')),
-          ...publishers.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name))),
+          ...publishers.map(
+            (item) => DropdownMenuItem(value: item.id, child: Text(item.name)),
+          ),
         ],
         onChanged: onPublisher,
       ),
@@ -1080,7 +1116,11 @@ class _MetaLine extends StatelessWidget {
 }
 
 class _ReviewsPanel extends StatelessWidget {
-  const _ReviewsPanel({required this.summary, this.onLoadMore, this.reviewsOverride});
+  const _ReviewsPanel({
+    required this.summary,
+    this.onLoadMore,
+    this.reviewsOverride,
+  });
 
   final dynamic summary;
   final VoidCallback? onLoadMore;
@@ -1088,7 +1128,8 @@ class _ReviewsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reviews = reviewsOverride ?? (summary.reviews.records as List<BookReview>);
+    final reviews =
+        reviewsOverride ?? (summary.reviews.records as List<BookReview>);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

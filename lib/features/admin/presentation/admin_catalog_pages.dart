@@ -65,13 +65,21 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
                     ),
             ),
           ),
-          value.when(data: (page) => AdminPagination(page: page, onPage: (p) => setState(() => _page = p)), loading: () => const SizedBox.shrink(), error: (_, __) => const SizedBox.shrink()),
+          value.when(
+            data: (page) => AdminPagination(
+              page: page,
+              onPage: (p) => setState(() => _page = p),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
     );
   }
 
-  void _refresh() => ref.invalidate(adminBooksProvider((status: _status, page: _page)));
+  void _refresh() =>
+      ref.invalidate(adminBooksProvider((status: _status, page: _page)));
 
   Future<void> _edit([Book? book]) async {
     final repo = ref.read(adminRepositoryProvider);
@@ -448,7 +456,7 @@ class _BookDialogState extends State<_BookDialog> {
       final uploaded = await widget.repository.upload(file!.bytes!, file.name);
       _fields['cover']!.text = uploaded.url;
     } catch (error) {
-        setState(() => _error = appErrorMessage(error));
+      setState(() => _error = appErrorMessage(error));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -492,7 +500,7 @@ class _BookDialogState extends State<_BookDialog> {
     } catch (error) {
       setState(() {
         _saving = false;
-      _error = appErrorMessage(error);
+        _error = appErrorMessage(error);
       });
     }
   }
@@ -588,9 +596,13 @@ class _AdminAuthorsPageState extends ConsumerState<AdminAuthorsPage> {
     name: (e) => e.name,
     subtitle: (e) =>
         [e.country, e.introduction].where((e) => e.isNotEmpty).join(' · '),
-    onSearch: (v) => setState(() { keyword = v; page = 1; }),
+    onSearch: (v) => setState(() {
+      keyword = v;
+      page = 1;
+    }),
     onPage: (v) => setState(() => page = v),
-    onRefresh: () => ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page))),
+    onRefresh: () =>
+        ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page))),
     onEdit: _edit,
     onDelete: _delete,
   );
@@ -641,9 +653,13 @@ class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
     name: (e) => e.name,
     subtitle: (e) =>
         [e.phone, e.address].where((e) => e.isNotEmpty).join(' · '),
-    onSearch: (v) => setState(() { keyword = v; page = 1; }),
+    onSearch: (v) => setState(() {
+      keyword = v;
+      page = 1;
+    }),
     onPage: (v) => setState(() => page = v),
-    onRefresh: () => ref.invalidate(adminPublishersProvider((keyword: keyword, page: page))),
+    onRefresh: () =>
+        ref.invalidate(adminPublishersProvider((keyword: keyword, page: page))),
     onEdit: _edit,
     onDelete: _delete,
   );
@@ -859,37 +875,37 @@ class _SimpleEntityPage<T> extends StatelessWidget {
                 : Column(
                     children: [
                       ...page.records
-                        .map(
-                          (item) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              name(item),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                          .map(
+                            (item) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                name(item),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Text(
+                                subtitle(item),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Wrap(
+                                children: [
+                                  IconButton(
+                                    tooltip: '编辑',
+                                    onPressed: () => onEdit(item),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                  IconButton(
+                                    tooltip: '删除',
+                                    onPressed: () => onDelete(item),
+                                    icon: const Icon(Icons.delete_outline),
+                                  ),
+                                ],
                               ),
                             ),
-                            subtitle: Text(
-                              subtitle(item),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Wrap(
-                              children: [
-                                IconButton(
-                                  tooltip: '编辑',
-                                  onPressed: () => onEdit(item),
-                                  icon: const Icon(Icons.edit_outlined),
-                                ),
-                                IconButton(
-                                  tooltip: '删除',
-                                  onPressed: () => onDelete(item),
-                                  icon: const Icon(Icons.delete_outline),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
+                          )
+                          .toList(),
                       AdminPagination(page: page, onPage: onPage),
                     ],
                   ),

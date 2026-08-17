@@ -106,7 +106,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                   ),
                                   const SizedBox(height: 12),
                                   addresses.when(
-                                    loading: () => const CommerceLoadingState(message: '正在加载收货地址'),
+                                    loading: () => const CommerceLoadingState(
+                                      message: '正在加载收货地址',
+                                    ),
                                     error: (error, _) => CommerceErrorState(
                                       message: '收货地址加载失败，请刷新后重试',
                                       onRetry: () => ref.invalidate(

@@ -323,10 +323,23 @@ class AdminPagination extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Text('共 ${page.total} 条 · 第 ${page.page}/$totalPages 页', style: const TextStyle(color: AdminColors.muted, fontSize: 12)),
+          Text(
+            '共 ${page.total} 条 · 第 ${page.page}/$totalPages 页',
+            style: const TextStyle(color: AdminColors.muted, fontSize: 12),
+          ),
           const SizedBox(width: 10),
-          IconButton(tooltip: '上一页', onPressed: page.page > 1 ? () => onPage(page.page - 1) : null, icon: const Icon(Icons.chevron_left)),
-          IconButton(tooltip: '下一页', onPressed: page.page < totalPages ? () => onPage(page.page + 1) : null, icon: const Icon(Icons.chevron_right)),
+          IconButton(
+            tooltip: '上一页',
+            onPressed: page.page > 1 ? () => onPage(page.page - 1) : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          IconButton(
+            tooltip: '下一页',
+            onPressed: page.page < totalPages
+                ? () => onPage(page.page + 1)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
         ],
       ),
     );

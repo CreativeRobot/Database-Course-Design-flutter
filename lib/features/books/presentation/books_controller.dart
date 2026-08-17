@@ -110,7 +110,12 @@ class BooksController extends StateNotifier<BooksState> {
     if (state.status != BooksStatus.initial) {
       return;
     }
-    await Future.wait([loadBooks(), loadCategories(), loadAuthors(), loadPublishers()]);
+    await Future.wait([
+      loadBooks(),
+      loadCategories(),
+      loadAuthors(),
+      loadPublishers(),
+    ]);
   }
 
   Future<void> loadBooks({
@@ -265,7 +270,12 @@ final bookDetailProvider = FutureProvider.family<BookDetail, int>((
   return ref.watch(bookRepositoryProvider).getBookDetail(bookId);
 });
 
-final bookReviewsProvider = FutureProvider
-    .family<BookReviewSummary, ({int bookId, int page})>((ref, key) {
-      return ref.watch(bookRepositoryProvider).getReviews(key.bookId, page: key.page);
+final bookReviewsProvider =
+    FutureProvider.family<BookReviewSummary, ({int bookId, int page})>((
+      ref,
+      key,
+    ) {
+      return ref
+          .watch(bookRepositoryProvider)
+          .getReviews(key.bookId, page: key.page);
     });
