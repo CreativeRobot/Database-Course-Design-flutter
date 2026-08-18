@@ -8,6 +8,10 @@ import '../auth/session_events.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
 
+bool _isAuthenticationPath(String path) {
+  return path == '/api/auth/login' || path == '/api/auth/register';
+}
+
 class ApiClient {
   ApiClient({required AppConfig config, required TokenStorage tokenStorage}) {
     _tokenStorage = tokenStorage;
@@ -41,7 +45,7 @@ class ApiClient {
       );
       final result = ApiResponse<T>.fromJson(response.data, parser: parser);
       if (!result.isSuccess) {
-        _notifyIfUnauthorized(result.code);
+        _notifyIfUnauthorized(path, result.code);
         throw ApiException(
           statusCode: response.statusCode,
           code: result.code,
@@ -106,7 +110,7 @@ class ApiClient {
       );
       final result = ApiResponse<T>.fromJson(response.data, parser: parser);
       if (!result.isSuccess) {
-        _notifyIfUnauthorized(result.code);
+        _notifyIfUnauthorized(path, result.code);
         throw ApiException(
           statusCode: response.statusCode,
           code: result.code,
@@ -155,8 +159,8 @@ class ApiClient {
     return 'Network request failed';
   }
 
-  void _notifyIfUnauthorized(int? code) {
-    if (code == 401) {
+  void _notifyIfUnauthorized(String path, int? code) {
+    if (code == 401 && !_isAuthenticationPath(path)) {
       unawaited(_tokenStorage.clearToken());
       SessionEvents.notifyTokenExpired();
     }
@@ -185,7 +189,8 @@ class _AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
+    if (err.response?.statusCode == 401 &&
+        !_isAuthenticationPath(err.requestOptions.path)) {
       await _tokenStorage.clearToken();
       SessionEvents.notifyTokenExpired();
     }

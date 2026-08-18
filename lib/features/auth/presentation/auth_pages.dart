@@ -52,9 +52,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authControllerProvider);
     return AuthFrame(
       eyebrow: 'BOOKSTORE  ·  ONLINE CATALOG',
-      headline: '让每一次阅读\\n都有迹可循',
-      description: '收藏值得反复翻阅的书，\\n也把下一本好书留给正在寻找它的人。',
-      bullets: const ['公开浏览在售图书', '订单与地址一处管理', '从书架到收货，全程可追踪'],
+      headline: '让每一次阅读都有迹可循',
+      description: '收藏值得反复翻阅的书，也把下一本好书留给正在寻找它的人。',
+      bullets: const [],
       card: AuthCard(
         title: '欢迎回来',
         subtitle: '登录你的账户，继续探索书页。',
@@ -211,9 +211,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final authState = ref.watch(authControllerProvider);
     return AuthFrame(
       eyebrow: 'BOOKSTORE  ·  YOUR READING SPACE',
-      headline: '从今天开始，\\n建立自己的书架',
-      description: '注册一个轻量的阅读账户，\\n把喜欢的书、订单和收货地址都放在手边。',
-      bullets: const ['保存你的阅读偏好', '更快完成下单与收货', '为读完的书留下真实评价'],
+      headline: '从今天开始，建立自己的书架',
+      description: '注册一个轻量的阅读账户，把喜欢的书、订单和收货地址都放在手边。',
+      bullets: const [],
       card: AuthCard(
         title: '创建账户',
         subtitle: '只需要几步，就能开始你的书店之旅。',

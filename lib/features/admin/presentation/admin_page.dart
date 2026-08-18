@@ -55,7 +55,27 @@ class AdminPage extends ConsumerWidget {
               child: Column(
                 children: [
                   _TopBar(section: section),
-                  Expanded(child: content),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(.018, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey(section),
+                        child: content,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

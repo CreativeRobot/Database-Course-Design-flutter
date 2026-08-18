@@ -106,7 +106,7 @@ class CommerceHeader extends StatelessWidget {
 
   static const _destinations = <(String, String, IconData)>[
     ('books', '继续选书', Icons.menu_book_outlined),
-    ('cart', '购物袋', Icons.shopping_bag_outlined),
+    ('cart', '购物车', Icons.shopping_bag_outlined),
     ('orders', '我的订单', Icons.receipt_long_outlined),
     ('reviews', '我的评价', Icons.rate_review_outlined),
     ('profile', '个人中心', Icons.person_outline_rounded),

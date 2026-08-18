@@ -70,7 +70,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                               Icons.arrow_back_rounded,
                               size: 18,
                             ),
-                            label: const Text('返回购物袋'),
+                            label: const Text('返回购物车'),
                           ),
                         ),
                         const SizedBox(height: 30),
@@ -613,7 +613,7 @@ class _NothingToCheckout extends StatelessWidget {
           const SizedBox(height: 14),
           const Text('没有可结算的已选商品'),
           const SizedBox(height: 18),
-          FilledButton(onPressed: onBack, child: const Text('返回购物袋')),
+          FilledButton(onPressed: onBack, child: const Text('返回购物车')),
         ],
       ),
     );

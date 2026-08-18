@@ -49,7 +49,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CommerceTitle(
-                            eyebrow: 'BAG  ·  购物袋',
+                            eyebrow: 'CART  ·  购物车',
                             title: '准备带走的书',
                             subtitle: '确认数量与库存，选择本次要结算的图书。',
                             trailing: OutlinedButton.icon(
@@ -65,7 +65,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                           ],
                           if (state.status == CartStatus.loading &&
                               cart.items.isEmpty)
-                            const CommerceLoadingState(message: '正在加载购物袋')
+                            const CommerceLoadingState(message: '正在加载购物车')
                           else if (state.status == CartStatus.failure &&
                               cart.items.isEmpty)
                             CommerceErrorState(
@@ -139,7 +139,7 @@ class _CartPageState extends ConsumerState<CartPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('移出购物袋'),
+        title: const Text('移出购物车'),
         content: Text('确定删除《${item.title}》吗？'),
         actions: [
           TextButton(
@@ -164,7 +164,7 @@ class _CartPageState extends ConsumerState<CartPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('删除已选商品'),
-        content: Text('将 $count 件已选商品移出购物袋？'),
+        content: Text('将 $count 件已选商品移出购物车？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -599,7 +599,7 @@ class _EmptyCart extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            '购物袋还是空的',
+            '购物车还是空的',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 9),

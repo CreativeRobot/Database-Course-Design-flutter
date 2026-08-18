@@ -332,6 +332,15 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
   return OrderRepository(ref.watch(apiClientProvider));
 });
 
+final shippedOrdersProvider = FutureProvider.autoDispose<List<BookOrder>>((
+  ref,
+) async {
+  final page = await ref
+      .watch(orderRepositoryProvider)
+      .listOrders(status: 'SHIPPED', size: 20);
+  return page.records;
+});
+
 final ordersControllerProvider =
     StateNotifierProvider<OrdersController, OrdersState>((ref) {
       return OrdersController(

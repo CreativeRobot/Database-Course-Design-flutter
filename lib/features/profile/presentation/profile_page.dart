@@ -6,9 +6,11 @@ import 'package:intl/intl.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../orders/data/order_models.dart';
+import '../../orders/presentation/orders_controller.dart';
 import 'profile_controller.dart';
 
-enum ProfileSection { overview, profile, addresses, security }
+enum ProfileSection { overview, profile, security }
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -90,7 +92,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
     if (state.status == ProfileStatus.failure && state.profile == null) {
       return _ProfileFailure(
-        message: state.errorMessage ?? '\u7528\u6237\u4e2d\u5fc3\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d',
+        message:
+            state.errorMessage ??
+            '\u7528\u6237\u4e2d\u5fc3\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d',
         onRetry: () => ref.read(profileControllerProvider.notifier).load(),
       );
     }
@@ -98,6 +102,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (profile == null) {
       return const _ProfileLoading();
     }
+    final shippedOrders = ref.watch(shippedOrdersProvider);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -112,30 +117,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           constraints: const BoxConstraints(maxWidth: 1120),
           child: switch (_section) {
             ProfileSection.overview => _OverviewSection(
-                profile: profile,
-                addresses: state.addresses,
-                defaultAddress: state.defaultAddress,
-                onOpenProfile: () => _selectSection(ProfileSection.profile),
-                onOpenAddresses: () =>
-                    _selectSection(ProfileSection.addresses),
-              ),
+              profile: profile,
+              defaultAddress: state.defaultAddress,
+              shippedOrders: shippedOrders,
+              onOpenProfile: () => _selectSection(ProfileSection.profile),
+              onRetryShippedOrders: () => ref.invalidate(shippedOrdersProvider),
+            ),
             ProfileSection.profile => _ProfileEditor(
-                profile: profile,
-                submitting: state.submitting,
-                onSave: _saveProfile,
-              ),
-            ProfileSection.addresses => _AddressSection(
-                addresses: state.addresses,
-                busyAddressId: state.busyAddressId,
-                onAdd: () => _editAddress(),
-                onEdit: (address) => _editAddress(address),
-                onSetDefault: _setDefaultAddress,
-                onDelete: _deleteAddress,
-              ),
+              profile: profile,
+              submitting: state.submitting,
+              onSave: _saveProfile,
+              addresses: state.addresses,
+              busyAddressId: state.busyAddressId,
+              onAddAddress: () => _editAddress(),
+              onEditAddress: _editAddress,
+              onSetDefaultAddress: _setDefaultAddress,
+              onDeleteAddress: _deleteAddress,
+            ),
             ProfileSection.security => _SecuritySection(
-                submitting: state.submitting,
-                onChangePassword: _changePassword,
-              ),
+              submitting: state.submitting,
+              onChangePassword: _changePassword,
+            ),
           },
         ),
       ),
@@ -191,7 +193,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         .read(profileControllerProvider.notifier)
         .saveAddress(input: input, addressId: address?.id);
     if (success && mounted) {
-      _showSuccess(address == null ? '\u6536\u8d27\u5730\u5740\u5df2\u6dfb\u52a0' : '\u6536\u8d27\u5730\u5740\u5df2\u66f4\u65b0');
+      _showSuccess(
+        address == null
+            ? '\u6536\u8d27\u5730\u5740\u5df2\u6dfb\u52a0'
+            : '\u6536\u8d27\u5730\u5740\u5df2\u66f4\u65b0',
+      );
     }
   }
 
@@ -212,7 +218,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('\u5220\u9664\u6536\u8d27\u5730\u5740'),
-        content: Text('\u786e\u5b9a\u5220\u9664 ${address.receiverName} \u7684\u6536\u8d27\u5730\u5740\u5417\uff1f'),
+        content: Text(
+          '\u786e\u5b9a\u5220\u9664 ${address.receiverName} \u7684\u6536\u8d27\u5730\u5740\u5417\uff1f',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -371,7 +379,10 @@ class _MobileHeader extends StatelessWidget {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(value: 'logout', child: Text('\u9000\u51fa\u767b\u5f55')),
+              PopupMenuItem(
+                value: 'logout',
+                child: Text('\u9000\u51fa\u767b\u5f55'),
+              ),
             ],
           ),
         ],
@@ -381,10 +392,7 @@ class _MobileHeader extends StatelessWidget {
 }
 
 class _MobileSectionBar extends StatelessWidget {
-  const _MobileSectionBar({
-    required this.selected,
-    required this.onSelected,
-  });
+  const _MobileSectionBar({required this.selected, required this.onSelected});
 
   final ProfileSection selected;
   final ValueChanged<ProfileSection> onSelected;
@@ -395,30 +403,34 @@ class _MobileSectionBar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
       child: Row(
-        children: ProfileSection.values.map((section) {
-          final active = section == selected;
-          return Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: TextButton.icon(
-              onPressed: () => onSelected(section),
-              icon: Icon(_sectionIcon(section), size: 17),
-              label: Text(_sectionLabel(section)),
-              style: TextButton.styleFrom(
-                foregroundColor:
-                    active ? Colors.white : ProfileColors.muted,
-                backgroundColor:
-                    active ? ProfileColors.ink : Colors.transparent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 11,
+        children: ProfileSection.values
+            .map((section) {
+              final active = section == selected;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: TextButton.icon(
+                  onPressed: () => onSelected(section),
+                  icon: Icon(_sectionIcon(section), size: 17),
+                  label: Text(_sectionLabel(section)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: active
+                        ? Colors.white
+                        : ProfileColors.muted,
+                    backgroundColor: active
+                        ? ProfileColors.ink
+                        : Colors.transparent,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 11,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          );
-        }).toList(growable: false),
+              );
+            })
+            .toList(growable: false),
       ),
     );
   }
@@ -549,17 +561,17 @@ class _SidebarCommand extends StatelessWidget {
 class _OverviewSection extends StatelessWidget {
   const _OverviewSection({
     required this.profile,
-    required this.addresses,
     required this.defaultAddress,
+    required this.shippedOrders,
     required this.onOpenProfile,
-    required this.onOpenAddresses,
+    required this.onRetryShippedOrders,
   });
 
   final UserProfile profile;
-  final List<UserAddress> addresses;
   final UserAddress? defaultAddress;
+  final AsyncValue<List<BookOrder>> shippedOrders;
   final VoidCallback onOpenProfile;
-  final VoidCallback onOpenAddresses;
+  final VoidCallback onRetryShippedOrders;
 
   @override
   Widget build(BuildContext context) {
@@ -569,7 +581,8 @@ class _OverviewSection extends StatelessWidget {
         const _SectionHeading(
           eyebrow: 'OVERVIEW  \u00b7  \u8d26\u6237\u6982\u89c8',
           title: '\u4e2a\u4eba\u4e2d\u5fc3',
-          subtitle: '\u7ba1\u7406\u4f60\u7684\u8d44\u6599\u3001\u6536\u8d27\u5730\u5740\u548c\u8d26\u6237\u5b89\u5168\u3002',
+          subtitle:
+              '\u67e5\u770b\u9ed8\u8ba4\u6536\u8d27\u5730\u5740\u3001\u53d1\u8d27\u8fdb\u5ea6\u548c\u8d26\u6237\u72b6\u6001\u3002',
         ),
         const SizedBox(height: 34),
         _AccountHero(profile: profile, onEdit: onOpenProfile),
@@ -585,32 +598,41 @@ class _OverviewSection extends StatelessWidget {
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.location_on_outlined,
-                  label: '\u6536\u8d27\u5730\u5740',
-                  value: '${addresses.length}',
-                  detail: defaultAddress == null ? '\u5c1a\u672a\u8bbe\u7f6e\u9ed8\u8ba4\u5730\u5740' : '\u5df2\u8bbe\u7f6e\u9ed8\u8ba4\u5730\u5740',
+                  label: '\u9ed8\u8ba4\u5730\u5740',
+                  value: defaultAddress == null
+                      ? '\u672a\u8bbe\u7f6e'
+                      : defaultAddress!.receiverName,
+                  detail: defaultAddress == null
+                      ? '\u8bf7\u5728\u4e2a\u4eba\u8d44\u6599\u4e2d\u7ba1\u7406\u5730\u5740'
+                      : '\u4e0b\u5355\u65f6\u4f18\u5148\u4f7f\u7528\u6b64\u5730\u5740',
                 ),
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.verified_user_outlined,
                   label: '\u8d26\u6237\u72b6\u6001',
                   value: profile.isEnabled ? '\u6b63\u5e38' : '\u505c\u7528',
-                  detail: profile.isAdmin ? '\u7ba1\u7406\u5458\u8d26\u6237' : '\u666e\u901a\u7528\u6237',
+                  detail: profile.isAdmin
+                      ? '\u7ba1\u7406\u5458\u8d26\u6237'
+                      : '\u666e\u901a\u7528\u6237',
                 ),
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.calendar_today_outlined,
                   label: '\u52a0\u5165\u4e66\u5e97',
                   value: _dateOf(profile.createTime),
-                  detail: '\u9605\u8bfb\u6863\u6848\u6301\u7eed\u8bb0\u5f55\u4e2d',
+                  detail:
+                      '\u9605\u8bfb\u6863\u6848\u6301\u7eed\u8bb0\u5f55\u4e2d',
                 ),
               ],
             );
           },
         ),
         const SizedBox(height: 22),
-        _DefaultAddressPanel(
-          address: defaultAddress,
-          onManage: onOpenAddresses,
+        _DefaultAddressPanel(address: defaultAddress),
+        const SizedBox(height: 38),
+        _ShippingOrdersPanel(
+          orders: shippedOrders,
+          onRetry: onRetryShippedOrders,
         ),
       ],
     );
@@ -756,10 +778,9 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _DefaultAddressPanel extends StatelessWidget {
-  const _DefaultAddressPanel({required this.address, required this.onManage});
+  const _DefaultAddressPanel({required this.address});
 
   final UserAddress? address;
-  final VoidCallback onManage;
 
   @override
   Widget build(BuildContext context) {
@@ -796,15 +817,135 @@ class _DefaultAddressPanel extends StatelessWidget {
               ],
             ),
           ),
-          TextButton.icon(
-            onPressed: onManage,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-            label: const Text('\u7ba1\u7406'),
-          ),
         ],
       ),
     );
   }
+}
+
+class _ShippingOrdersPanel extends StatelessWidget {
+  const _ShippingOrdersPanel({required this.orders, required this.onRetry});
+
+  final AsyncValue<List<BookOrder>> orders;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => orders.when(
+    data: (orders) {
+      final shippedItems = <({BookOrder order, OrderLine item})>[
+        for (final order in orders)
+          for (final item in order.items) (order: order, item: item),
+      ];
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: ProfileColors.line),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.local_shipping_outlined, size: 21),
+                SizedBox(width: 10),
+                Text(
+                  '\u6b63\u5728\u53d1\u8d27',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '\u5df2\u51fa\u5e93\u7684\u56fe\u4e66\u4f1a\u5728\u8fd9\u91cc\u663e\u793a\u3002',
+              style: TextStyle(color: ProfileColors.muted, fontSize: 13),
+            ),
+            const SizedBox(height: 18),
+            if (shippedItems.isEmpty)
+              const Text(
+                '\u5f53\u524d\u6ca1\u6709\u6b63\u5728\u53d1\u8d27\u7684\u56fe\u4e66\u3002',
+                style: TextStyle(color: ProfileColors.muted),
+              )
+            else
+              ...shippedItems.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: InkWell(
+                    onTap: () => context.go('/orders/${entry.order.id}'),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.menu_book_outlined, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.item.bookTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '\u8ba2\u5355 ${entry.order.orderNo}  \u00b7  \u6570\u91cf x${entry.item.quantity}',
+                                  style: const TextStyle(
+                                    color: ProfileColors.muted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+    loading: () => const SizedBox(
+      height: 132,
+      child: Center(child: CircularProgressIndicator()),
+    ),
+    error: (_, _) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        border: Border.all(color: ProfileColors.line),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              '\u6b63\u5728\u53d1\u8d27\u7684\u56fe\u4e66\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d\u3002',
+              style: TextStyle(color: ProfileColors.muted),
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('\u91cd\u8bd5'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ProfileEditor extends StatefulWidget {
@@ -812,6 +953,12 @@ class _ProfileEditor extends StatefulWidget {
     required this.profile,
     required this.submitting,
     required this.onSave,
+    required this.addresses,
+    required this.busyAddressId,
+    required this.onAddAddress,
+    required this.onEditAddress,
+    required this.onSetDefaultAddress,
+    required this.onDeleteAddress,
   });
 
   final UserProfile profile;
@@ -820,7 +967,14 @@ class _ProfileEditor extends StatefulWidget {
     required String nickname,
     required String email,
     required String phone,
-  }) onSave;
+  })
+  onSave;
+  final List<UserAddress> addresses;
+  final int? busyAddressId;
+  final VoidCallback onAddAddress;
+  final ValueChanged<UserAddress> onEditAddress;
+  final ValueChanged<UserAddress> onSetDefaultAddress;
+  final ValueChanged<UserAddress> onDeleteAddress;
 
   @override
   State<_ProfileEditor> createState() => _ProfileEditorState();
@@ -878,7 +1032,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         const _SectionHeading(
           eyebrow: 'PROFILE  \u00b7  \u4e2a\u4eba\u8d44\u6599',
           title: '\u7f16\u8f91\u8d44\u6599',
-          subtitle: '\u5b8c\u5584\u8054\u7cfb\u65b9\u5f0f\uff0c\u8ba9\u8ba2\u5355\u4e0e\u6536\u8d27\u4fe1\u606f\u66f4\u6e05\u6670\u3002',
+          subtitle:
+              '\u5b8c\u5584\u8054\u7cfb\u65b9\u5f0f\uff0c\u8ba9\u8ba2\u5355\u4e0e\u6536\u8d27\u4fe1\u606f\u66f4\u6e05\u6670\u3002',
         ),
         const SizedBox(height: 34),
         _FormSurface(
@@ -896,7 +1051,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 _ProfileTextField(
                   controller: _nicknameController,
                   label: '\u6635\u79f0',
-                  hintText: '\u8f93\u5165\u4f60\u5e0c\u671b\u5c55\u793a\u7684\u540d\u5b57',
+                  hintText:
+                      '\u8f93\u5165\u4f60\u5e0c\u671b\u5c55\u793a\u7684\u540d\u5b57',
                   icon: Icons.badge_outlined,
                   validator: (value) {
                     if ((value ?? '').trim().length > 30) {
@@ -915,8 +1071,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                   validator: (value) {
                     final text = (value ?? '').trim();
                     if (text.isNotEmpty &&
-                        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                            .hasMatch(text)) {
+                        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
                       return '\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u90ae\u7bb1\u5730\u5740';
                     }
                     return null;
@@ -953,12 +1108,25 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                             ),
                           )
                         : const Icon(Icons.save_outlined, size: 18),
-                    label: Text(widget.submitting ? '\u6b63\u5728\u4fdd\u5b58' : '\u4fdd\u5b58\u8d44\u6599'),
+                    label: Text(
+                      widget.submitting
+                          ? '\u6b63\u5728\u4fdd\u5b58'
+                          : '\u4fdd\u5b58\u8d44\u6599',
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+        ),
+        const SizedBox(height: 52),
+        _AddressSection(
+          addresses: widget.addresses,
+          busyAddressId: widget.busyAddressId,
+          onAdd: widget.onAddAddress,
+          onEdit: widget.onEditAddress,
+          onSetDefault: widget.onSetDefaultAddress,
+          onDelete: widget.onDeleteAddress,
         ),
       ],
     );
@@ -989,8 +1157,9 @@ class _AddressSection extends StatelessWidget {
       children: [
         _SectionHeading(
           eyebrow: 'ADDRESS  \u00b7  \u6536\u8d27\u5730\u5740',
-          title: '\u5730\u5740\u7c3f',
-          subtitle: '\u7ba1\u7406\u5e38\u7528\u6536\u8d27\u4fe1\u606f\uff0c\u9ed8\u8ba4\u5730\u5740\u4f1a\u5728\u4e0b\u5355\u65f6\u4f18\u5148\u663e\u793a\u3002',
+          title: '\u6536\u8d27\u5730\u5740',
+          subtitle:
+              '\u7ba1\u7406\u5e38\u7528\u6536\u8d27\u4fe1\u606f\uff0c\u9ed8\u8ba4\u5730\u5740\u4f1a\u5728\u4e0b\u5355\u65f6\u4f18\u5148\u663e\u793a\u3002',
           action: FilledButton.icon(
             onPressed: busyAddressId == null ? onAdd : null,
             icon: const Icon(Icons.add_rounded, size: 18),
@@ -1225,7 +1394,8 @@ class _SecuritySection extends StatefulWidget {
     required String oldPassword,
     required String newPassword,
     required String confirmPassword,
-  }) onChangePassword;
+  })
+  onChangePassword;
 
   @override
   State<_SecuritySection> createState() => _SecuritySectionState();
@@ -1273,7 +1443,8 @@ class _SecuritySectionState extends State<_SecuritySection> {
         const _SectionHeading(
           eyebrow: 'SECURITY  \u00b7  \u8d26\u6237\u5b89\u5168',
           title: '\u4fee\u6539\u5bc6\u7801',
-          subtitle: '\u5b9a\u671f\u66f4\u6362\u5bc6\u7801\uff0c\u4fdd\u6301\u8d26\u6237\u548c\u8ba2\u5355\u4fe1\u606f\u5b89\u5168\u3002',
+          subtitle:
+              '\u5b9a\u671f\u66f4\u6362\u5bc6\u7801\uff0c\u4fdd\u6301\u8d26\u6237\u548c\u8ba2\u5355\u4fe1\u606f\u5b89\u5168\u3002',
         ),
         const SizedBox(height: 34),
         _FormSurface(
@@ -1286,9 +1457,8 @@ class _SecuritySectionState extends State<_SecuritySection> {
                   controller: _oldPasswordController,
                   label: '\u5f53\u524d\u5bc6\u7801',
                   visible: _showOldPassword,
-                  onToggle: () => setState(
-                    () => _showOldPassword = !_showOldPassword,
-                  ),
+                  onToggle: () =>
+                      setState(() => _showOldPassword = !_showOldPassword),
                   validator: (value) => (value ?? '').isEmpty
                       ? '\u8bf7\u8f93\u5165\u5f53\u524d\u5bc6\u7801'
                       : null,
@@ -1298,9 +1468,8 @@ class _SecuritySectionState extends State<_SecuritySection> {
                   controller: _newPasswordController,
                   label: '\u65b0\u5bc6\u7801',
                   visible: _showNewPassword,
-                  onToggle: () => setState(
-                    () => _showNewPassword = !_showNewPassword,
-                  ),
+                  onToggle: () =>
+                      setState(() => _showNewPassword = !_showNewPassword),
                   validator: (value) => (value ?? '').length < 6
                       ? '\u65b0\u5bc6\u7801\u81f3\u5c11\u9700\u8981 6 \u4e2a\u5b57\u7b26'
                       : null,
@@ -1334,7 +1503,11 @@ class _SecuritySectionState extends State<_SecuritySection> {
                             ),
                           )
                         : const Icon(Icons.lock_reset_rounded, size: 19),
-                    label: Text(widget.submitting ? '\u6b63\u5728\u63d0\u4ea4' : '\u66f4\u65b0\u5bc6\u7801'),
+                    label: Text(
+                      widget.submitting
+                          ? '\u6b63\u5728\u63d0\u4ea4'
+                          : '\u66f4\u65b0\u5bc6\u7801',
+                    ),
                   ),
                 ),
               ],
@@ -1471,7 +1644,9 @@ class _AddressDialogState extends State<_AddressDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.address == null ? '\u65b0\u589e\u6536\u8d27\u5730\u5740' : '\u7f16\u8f91\u6536\u8d27\u5730\u5740',
+                            widget.address == null
+                                ? '\u65b0\u589e\u6536\u8d27\u5730\u5740'
+                                : '\u7f16\u8f91\u6536\u8d27\u5730\u5740',
                             style: const TextStyle(
                               fontFamily: 'serif',
                               fontSize: 25,
@@ -1506,7 +1681,9 @@ class _AddressDialogState extends State<_AddressDialog> {
                         label: '\u6536\u8d27\u4eba',
                         hintText: '\u8f93\u5165\u6536\u8d27\u4eba\u59d3\u540d',
                         icon: Icons.person_outline,
-                        validator: _required('\u8bf7\u8f93\u5165\u6536\u8d27\u4eba'),
+                        validator: _required(
+                          '\u8bf7\u8f93\u5165\u6536\u8d27\u4eba',
+                        ),
                       ),
                       _ProfileTextField(
                         controller: _phoneController,
@@ -1514,7 +1691,9 @@ class _AddressDialogState extends State<_AddressDialog> {
                         hintText: '\u8f93\u5165\u6536\u8d27\u7535\u8bdd',
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
-                        validator: _required('\u8bf7\u8f93\u5165\u8054\u7cfb\u7535\u8bdd'),
+                        validator: _required(
+                          '\u8bf7\u8f93\u5165\u8054\u7cfb\u7535\u8bdd',
+                        ),
                       ),
                       _ProfileTextField(
                         controller: _provinceController,
@@ -1533,13 +1712,15 @@ class _AddressDialogState extends State<_AddressDialog> {
                       _ProfileTextField(
                         controller: _districtController,
                         label: '\u533a / \u53bf',
-                        hintText: '\u4f8b\u5982\uff1a\u5357\u5c71\u533a\uff08\u53ef\u9009\uff09',
+                        hintText:
+                            '\u4f8b\u5982\uff1a\u5357\u5c71\u533a\uff08\u53ef\u9009\uff09',
                         icon: Icons.place_outlined,
                       ),
                       _ProfileTextField(
                         controller: _postalCodeController,
                         label: '\u90ae\u653f\u7f16\u7801',
-                        hintText: '\u4f8b\u5982\uff1a518000\uff08\u53ef\u9009\uff09',
+                        hintText:
+                            '\u4f8b\u5982\uff1a518000\uff08\u53ef\u9009\uff09',
                         icon: Icons.markunread_mailbox_outlined,
                         keyboardType: TextInputType.number,
                       ),
@@ -1566,8 +1747,7 @@ class _AddressDialogState extends State<_AddressDialog> {
                               Expanded(child: fields[i + 1]),
                             ],
                           ),
-                          if (i < fields.length - 2)
-                            const SizedBox(height: 16),
+                          if (i < fields.length - 2) const SizedBox(height: 16),
                         ],
                       ],
                     );
@@ -1577,10 +1757,13 @@ class _AddressDialogState extends State<_AddressDialog> {
                 _ProfileTextField(
                   controller: _detailController,
                   label: '\u8be6\u7ec6\u5730\u5740',
-                  hintText: '\u8857\u9053\u3001\u697c\u680b\u3001\u95e8\u724c\u53f7',
+                  hintText:
+                      '\u8857\u9053\u3001\u697c\u680b\u3001\u95e8\u724c\u53f7',
                   icon: Icons.home_outlined,
                   maxLines: 2,
-                  validator: _required('\u8bf7\u8f93\u5165\u8be6\u7ec6\u5730\u5740'),
+                  validator: _required(
+                    '\u8bf7\u8f93\u5165\u8be6\u7ec6\u5730\u5740',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile.adaptive(
@@ -1854,10 +2037,14 @@ class _PasswordField extends StatelessWidget {
             hintText: '\u8bf7\u8f93\u5165$label',
             prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
             suffixIcon: IconButton(
-              tooltip: visible ? '\u9690\u85cf\u5bc6\u7801' : '\u663e\u793a\u5bc6\u7801',
+              tooltip: visible
+                  ? '\u9690\u85cf\u5bc6\u7801'
+                  : '\u663e\u793a\u5bc6\u7801',
               onPressed: onToggle,
               icon: Icon(
-                visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                visible
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
               ),
             ),
             filled: true,
@@ -1992,7 +2179,6 @@ String _sectionLabel(ProfileSection section) {
   return switch (section) {
     ProfileSection.overview => '\u8d26\u6237\u6982\u89c8',
     ProfileSection.profile => '\u4e2a\u4eba\u8d44\u6599',
-    ProfileSection.addresses => '\u6536\u8d27\u5730\u5740',
     ProfileSection.security => '\u8d26\u6237\u5b89\u5168',
   };
 }
@@ -2001,13 +2187,14 @@ IconData _sectionIcon(ProfileSection section) {
   return switch (section) {
     ProfileSection.overview => Icons.dashboard_outlined,
     ProfileSection.profile => Icons.person_outline_rounded,
-    ProfileSection.addresses => Icons.location_on_outlined,
     ProfileSection.security => Icons.lock_outline_rounded,
   };
 }
 
 String _dateOf(DateTime? value) {
-  return value == null ? '--' : DateFormat('yyyy.MM.dd').format(value.toLocal());
+  return value == null
+      ? '--'
+      : DateFormat('yyyy.MM.dd').format(value.toLocal());
 }
 
 abstract final class ProfileColors {

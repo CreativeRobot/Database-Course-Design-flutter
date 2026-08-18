@@ -66,15 +66,10 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                     compact: compact,
                     session: session,
                     onCart: () => _protectedAction(context, '/cart'),
+                    onAdmin: () => _protectedAction(context, '/admin'),
                     onOrders: () => _protectedAction(context, '/orders'),
                     onProfile: () => _protectedAction(context, '/profile'),
                     onLogin: () => context.go('/login'),
-                    onLogout: () async {
-                      await ref.read(authControllerProvider.notifier).logout();
-                      if (context.mounted) {
-                        setState(() {});
-                      }
-                    },
                   ),
                 ),
                 SliverPadding(
@@ -283,7 +278,7 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? '已加入购物袋' : '加入购物袋失败'),
+                      content: Text(success ? '已加入购物车' : '加入购物车失败'),
                       action: success
                           ? SnackBarAction(
                               label: '查看',
@@ -397,23 +392,24 @@ class _BooksHeader extends StatelessWidget {
     required this.compact,
     required this.session,
     required this.onCart,
+    required this.onAdmin,
     required this.onOrders,
     required this.onProfile,
     required this.onLogin,
-    required this.onLogout,
   });
 
   final bool compact;
   final AuthSession? session;
   final VoidCallback onCart;
+  final VoidCallback onAdmin;
   final VoidCallback onOrders;
   final VoidCallback onProfile;
   final VoidCallback onLogin;
-  final Future<void> Function() onLogout;
 
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = session != null && session!.token.isNotEmpty;
+    final isAdmin = isAuthenticated && session!.role == 'ADMIN';
     return Padding(
       padding: EdgeInsets.fromLTRB(compact ? 20 : 56, 18, compact ? 20 : 56, 0),
       child: Row(
@@ -433,8 +429,15 @@ class _BooksHeader extends StatelessWidget {
             TextButton.icon(
               onPressed: onCart,
               icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-              label: const Text('购物袋'),
+              label: const Text('购物车'),
             ),
+            if (isAdmin) ...[
+              TextButton.icon(
+                onPressed: onAdmin,
+                icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
+                label: const Text('管理台'),
+              ),
+            ],
             TextButton.icon(
               onPressed: onOrders,
               icon: const Icon(Icons.receipt_long_outlined, size: 18),
@@ -443,46 +446,46 @@ class _BooksHeader extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           if (isAuthenticated)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'profile') {
-                  onProfile();
-                } else {
-                  onLogout();
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'profile', child: Text('个人中心')),
-                PopupMenuItem(value: 'logout', child: Text('退出登录')),
-              ],
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 17,
-                    backgroundColor: BookStoreColors.sand,
-                    child: Text(
-                      _initialOf(
-                        session!.nickname.isNotEmpty
-                            ? session!.nickname
-                            : session!.username,
-                      ),
-                      style: const TextStyle(
-                        color: BookStoreColors.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+            Tooltip(
+              message: '个人中心',
+              child: InkWell(
+                onTap: onProfile,
+                borderRadius: BorderRadius.circular(22),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
                   ),
-                  if (!compact) ...[
-                    const SizedBox(width: 9),
-                    Text(
-                      session!.nickname.isNotEmpty
-                          ? session!.nickname
-                          : session!.username,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down_rounded),
-                  ],
-                ],
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 17,
+                        backgroundColor: BookStoreColors.sand,
+                        child: Text(
+                          _initialOf(
+                            session!.nickname.isNotEmpty
+                                ? session!.nickname
+                                : session!.username,
+                          ),
+                          style: const TextStyle(
+                            color: BookStoreColors.ink,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (!compact) ...[
+                        const SizedBox(width: 9),
+                        Text(
+                          session!.nickname.isNotEmpty
+                              ? session!.nickname
+                              : session!.username,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             )
           else
@@ -1022,7 +1025,7 @@ class _BookSummary extends StatelessWidget {
                   ? '正在加入'
                   : onAdd == null
                   ? '暂不可购买'
-                  : '加入购物袋',
+                  : '加入购物车',
             ),
           ),
         ),
