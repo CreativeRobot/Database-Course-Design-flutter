@@ -130,6 +130,37 @@ class ProfileController extends StateNotifier<ProfileState> {
     }
   }
 
+  Future<bool> uploadAvatar({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    state = state.copyWith(submitting: true, clearError: true);
+    try {
+      final profile = await _repository.uploadAvatar(
+        bytes: bytes,
+        filename: filename,
+      );
+      state = state.copyWith(
+        profile: profile,
+        submitting: false,
+        clearError: true,
+      );
+      return true;
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        submitting: false,
+        errorMessage: await _messageFor(error),
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        submitting: false,
+        errorMessage: '上传头像失败，请稍后再试',
+      );
+      return false;
+    }
+  }
+
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,

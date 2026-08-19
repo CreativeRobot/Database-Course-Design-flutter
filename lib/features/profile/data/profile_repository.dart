@@ -29,6 +29,19 @@ class ProfileRepository {
     return response.data;
   }
 
+  Future<UserProfile> uploadAvatar({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final response = await _apiClient.postMultipart<UserProfile>(
+      ApiPaths.meAvatar,
+      bytes: bytes,
+      filename: filename,
+      parser: UserProfile.fromJson,
+    );
+    return response.data;
+  }
+
   Future<void> changePassword({
     required String oldPassword,
     required String newPassword,

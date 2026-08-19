@@ -1,8 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/providers.dart';
+import '../../../core/utils/media_url.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
 import '../../auth/presentation/auth_controller.dart';
@@ -33,6 +37,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(profileControllerProvider);
+    final baseUrl = ref.watch(appConfigProvider).baseUrl;
     ref.listen<ProfileState>(profileControllerProvider, (previous, next) {
       final message = next.errorMessage;
       if (message != null && message != previous?.errorMessage) {
@@ -67,6 +72,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   width: 276,
                   child: _ProfileSidebar(
                     profile: state.profile,
+                    avatarUrl: resolveMediaUrl(
+                      baseUrl,
+                      state.profile?.avatarUrl,
+                    ),
                     selected: _section,
                     onSelected: _selectSection,
                     onLogout: _logout,
@@ -103,6 +112,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return const _ProfileLoading();
     }
     final shippedOrders = ref.watch(shippedOrdersProvider);
+    final avatarUrl = resolveMediaUrl(
+      ref.watch(appConfigProvider).baseUrl,
+      profile.avatarUrl,
+    );
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -118,6 +131,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           child: switch (_section) {
             ProfileSection.overview => _OverviewSection(
               profile: profile,
+              avatarUrl: avatarUrl,
               defaultAddress: state.defaultAddress,
               shippedOrders: shippedOrders,
               onOpenProfile: () => _selectSection(ProfileSection.profile),
@@ -125,8 +139,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             ProfileSection.profile => _ProfileEditor(
               profile: profile,
+              avatarUrl: avatarUrl,
               submitting: state.submitting,
               onSave: _saveProfile,
+              onUploadAvatar: _uploadAvatar,
               addresses: state.addresses,
               busyAddressId: state.busyAddressId,
               onAddAddress: () => _editAddress(),
@@ -160,6 +176,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _showSuccess('\u4e2a\u4eba\u8d44\u6599\u5df2\u4fdd\u5b58');
     }
     return success;
+  }
+
+  Future<void> _uploadAvatar() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file?.bytes == null) {
+      return;
+    }
+
+    final success = await ref
+        .read(profileControllerProvider.notifier)
+        .uploadAvatar(bytes: file!.bytes!, filename: file.name);
+    if (success && mounted) {
+      _showSuccess('头像已更新');
+    }
   }
 
   Future<bool> _changePassword({
@@ -271,12 +305,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 class _ProfileSidebar extends StatelessWidget {
   const _ProfileSidebar({
     required this.profile,
+    required this.avatarUrl,
     required this.selected,
     required this.onSelected,
     required this.onLogout,
   });
 
   final UserProfile? profile;
+  final String? avatarUrl;
   final ProfileSection selected;
   final ValueChanged<ProfileSection> onSelected;
   final Future<void> Function() onLogout;
@@ -293,7 +329,11 @@ class _ProfileSidebar extends StatelessWidget {
           if (profile != null) ...[
             Row(
               children: [
-                _ProfileAvatar(name: profile!.displayName, size: 46),
+                _ProfileAvatar(
+                  name: profile!.displayName,
+                  imageUrl: avatarUrl,
+                  size: 46,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -561,6 +601,7 @@ class _SidebarCommand extends StatelessWidget {
 class _OverviewSection extends StatelessWidget {
   const _OverviewSection({
     required this.profile,
+    required this.avatarUrl,
     required this.defaultAddress,
     required this.shippedOrders,
     required this.onOpenProfile,
@@ -568,6 +609,7 @@ class _OverviewSection extends StatelessWidget {
   });
 
   final UserProfile profile;
+  final String? avatarUrl;
   final UserAddress? defaultAddress;
   final AsyncValue<List<BookOrder>> shippedOrders;
   final VoidCallback onOpenProfile;
@@ -585,7 +627,11 @@ class _OverviewSection extends StatelessWidget {
               '\u67e5\u770b\u9ed8\u8ba4\u6536\u8d27\u5730\u5740\u3001\u53d1\u8d27\u8fdb\u5ea6\u548c\u8d26\u6237\u72b6\u6001\u3002',
         ),
         const SizedBox(height: 34),
-        _AccountHero(profile: profile, onEdit: onOpenProfile),
+        _AccountHero(
+          profile: profile,
+          avatarUrl: avatarUrl,
+          onEdit: onOpenProfile,
+        ),
         const SizedBox(height: 22),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -640,9 +686,14 @@ class _OverviewSection extends StatelessWidget {
 }
 
 class _AccountHero extends StatelessWidget {
-  const _AccountHero({required this.profile, required this.onEdit});
+  const _AccountHero({
+    required this.profile,
+    required this.avatarUrl,
+    required this.onEdit,
+  });
 
   final UserProfile profile;
+  final String? avatarUrl;
   final VoidCallback onEdit;
 
   @override
@@ -660,7 +711,11 @@ class _AccountHero extends StatelessWidget {
         runSpacing: 18,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          _ProfileAvatar(name: profile.displayName, size: 64),
+          _ProfileAvatar(
+            name: profile.displayName,
+            imageUrl: avatarUrl,
+            size: 64,
+          ),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 220, maxWidth: 520),
             child: Column(
@@ -951,8 +1006,10 @@ class _ShippingOrdersPanel extends StatelessWidget {
 class _ProfileEditor extends StatefulWidget {
   const _ProfileEditor({
     required this.profile,
+    required this.avatarUrl,
     required this.submitting,
     required this.onSave,
+    required this.onUploadAvatar,
     required this.addresses,
     required this.busyAddressId,
     required this.onAddAddress,
@@ -962,6 +1019,7 @@ class _ProfileEditor extends StatefulWidget {
   });
 
   final UserProfile profile;
+  final String? avatarUrl;
   final bool submitting;
   final Future<bool> Function({
     required String nickname,
@@ -969,6 +1027,7 @@ class _ProfileEditor extends StatefulWidget {
     required String phone,
   })
   onSave;
+  final Future<void> Function() onUploadAvatar;
   final List<UserAddress> addresses;
   final int? busyAddressId;
   final VoidCallback onAddAddress;
@@ -1042,6 +1101,48 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 104,
+                    height: 104,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _ProfileAvatar(
+                          name: widget.profile.displayName,
+                          imageUrl: widget.avatarUrl,
+                          size: 96,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Tooltip(
+                            message: '上传头像',
+                            child: Material(
+                              color: ProfileColors.ink,
+                              shape: const CircleBorder(),
+                              child: IconButton(
+                                onPressed: widget.submitting
+                                    ? null
+                                    : widget.onUploadAvatar,
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 36,
+                                  height: 36,
+                                ),
+                                iconSize: 18,
+                                color: Colors.white,
+                                disabledColor: ProfileColors.placeholder,
+                                icon: const Icon(Icons.photo_camera_outlined),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
                 _ReadOnlyField(
                   label: '\u7528\u6237\u540d',
                   value: widget.profile.username,
@@ -2094,7 +2195,37 @@ class _StatusTag extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.name, required this.size});
+  const _ProfileAvatar({required this.name, required this.size, this.imageUrl});
+
+  final String name;
+  final double size;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl != null) {
+      return Container(
+        width: size,
+        height: size,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          border: Border.all(color: ProfileColors.line),
+          shape: BoxShape.circle,
+        ),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
+          fit: BoxFit.cover,
+          placeholder: (_, _) => _AvatarInitials(name: name, size: size),
+          errorWidget: (_, _, _) => _AvatarInitials(name: name, size: size),
+        ),
+      );
+    }
+    return _AvatarInitials(name: name, size: size);
+  }
+}
+
+class _AvatarInitials extends StatelessWidget {
+  const _AvatarInitials({required this.name, required this.size});
 
   final String name;
   final double size;

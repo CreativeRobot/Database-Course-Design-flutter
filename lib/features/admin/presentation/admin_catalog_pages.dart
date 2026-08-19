@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/app_error.dart';
+import '../../../core/providers.dart';
+import '../../../core/utils/media_url.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/common/page_response.dart';
@@ -24,6 +26,7 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
   @override
   Widget build(BuildContext context) {
     final value = ref.watch(adminBooksProvider((status: _status, page: _page)));
+    final baseUrl = ref.watch(appConfigProvider).baseUrl;
     return AdminPageBody(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,6 +59,7 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
                           for (final book in page.records)
                             _BookRow(
                               book: book,
+                              coverUrl: resolveMediaUrl(baseUrl, book.coverUrl),
                               onEdit: () => _edit(book),
                               onStatus: () => _statusBook(book),
                               onStock: () => _stock(book),
@@ -149,11 +153,13 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
 class _BookRow extends StatelessWidget {
   const _BookRow({
     required this.book,
+    required this.coverUrl,
     required this.onEdit,
     required this.onStatus,
     required this.onStock,
   });
   final Book book;
+  final String? coverUrl;
   final VoidCallback onEdit;
   final VoidCallback onStatus;
   final VoidCallback onStock;
@@ -165,7 +171,7 @@ class _BookRow extends StatelessWidget {
     ),
     child: Row(
       children: [
-        CommerceCover(url: book.coverUrl, width: 42),
+        CommerceCover(url: coverUrl, width: 42),
         const SizedBox(width: 13),
         Expanded(
           flex: 3,

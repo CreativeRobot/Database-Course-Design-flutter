@@ -7,6 +7,7 @@ class UserProfile {
     required this.phone,
     required this.role,
     required this.status,
+    this.avatarUrl,
     this.createTime,
     this.updateTime,
   });
@@ -23,6 +24,7 @@ class UserProfile {
       phone: json['phone'] as String? ?? '',
       role: json['role'] as String? ?? 'CUSTOMER',
       status: (json['status'] as num?)?.toInt() ?? 0,
+      avatarUrl: json['avatarUrl'] as String?,
       createTime: DateTime.tryParse(json['createTime'] as String? ?? ''),
       updateTime: DateTime.tryParse(json['updateTime'] as String? ?? ''),
     );
@@ -35,6 +37,7 @@ class UserProfile {
   final String phone;
   final String role;
   final int status;
+  final String? avatarUrl;
   final DateTime? createTime;
   final DateTime? updateTime;
 

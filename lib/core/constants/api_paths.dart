@@ -10,6 +10,7 @@ abstract final class ApiPaths {
   static String bookReviews(int bookId) => '$books/$bookId/reviews';
 
   static const me = '/api/user/me';
+  static const meAvatar = '$me/avatar';
   static const mePassword = '/api/user/me/password';
   static const addresses = '/api/user/addresses';
   static String address(int addressId) => '$addresses/$addressId';
