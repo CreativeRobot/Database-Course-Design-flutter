@@ -6,6 +6,7 @@ import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/auth_pages.dart';
 import '../../features/admin/presentation/admin_page.dart';
 import '../../features/books/presentation/books_page.dart';
+import '../../features/books/presentation/search_results_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
 import '../../features/orders/presentation/checkout_page.dart';
 import '../../features/orders/presentation/orders_page.dart';
@@ -60,6 +61,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(path: '/books', builder: (context, state) => const BooksPage()),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => SearchResultsPage(
+          initialKeyword: state.uri.queryParameters['keyword'] ?? '',
+        ),
+      ),
       GoRoute(
         path: '/books/:bookId',
         builder: (context, state) {

@@ -14,6 +14,8 @@ import '../../../data/models/book/category.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
+import '../../recommendations/presentation/recommendation_controller.dart';
+import '../../recommendations/presentation/recommendation_section.dart';
 import 'books_controller.dart';
 
 class BooksPage extends ConsumerStatefulWidget {
@@ -32,6 +34,12 @@ class _BooksPageState extends ConsumerState<BooksPage> {
     Future<void>.microtask(
       () => ref.read(booksControllerProvider.notifier).loadInitial(),
     );
+    Future<void>.microtask(() {
+      final auth = ref.read(authControllerProvider);
+      if (auth.isAuthenticated && auth.session?.role != 'ADMIN') {
+        ref.read(recommendationControllerProvider.notifier).load();
+      }
+    });
   }
 
   @override
@@ -42,9 +50,9 @@ class _BooksPageState extends ConsumerState<BooksPage> {
 
   void _search() {
     FocusManager.instance.primaryFocus?.unfocus();
-    ref
-        .read(booksControllerProvider.notifier)
-        .loadBooks(keyword: _searchController.text, clearCategory: true);
+    final keyword = _searchController.text.trim();
+    if (keyword.isEmpty) return;
+    context.push('/search?keyword=${Uri.encodeQueryComponent(keyword)}');
   }
 
   @override
@@ -52,6 +60,7 @@ class _BooksPageState extends ConsumerState<BooksPage> {
     final state = ref.watch(booksControllerProvider);
     final session = ref.watch(authControllerProvider).session;
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
+    final recommendation = ref.watch(recommendationControllerProvider);
 
     return Scaffold(
       backgroundColor: BookStoreColors.canvas,
@@ -87,6 +96,27 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                         searchController: _searchController,
                         onSearch: _search,
                       ),
+                      if (session?.role != 'ADMIN') ...[
+                        const SizedBox(height: 34),
+                        if (recommendation.home != null)
+                          RecommendationBooks(
+                            home: recommendation.home!,
+                            baseUrl: baseUrl,
+                            onBookTap: (bookId) =>
+                                context.push('/books/$bookId'),
+                          )
+                        else if (recommendation.status ==
+                            RecommendationStatus.loading)
+                          const CommerceLoadingState(message: '正在准备推荐')
+                        else if (recommendation.status ==
+                            RecommendationStatus.failure)
+                          CommerceErrorState(
+                            message: recommendation.errorMessage ?? '推荐暂时无法加载',
+                            onRetry: () => ref
+                                .read(recommendationControllerProvider.notifier)
+                                .load(),
+                          ),
+                      ],
                       const SizedBox(height: 36),
                       _CategoryBar(
                         categories: state.categories,
