@@ -1,6 +1,7 @@
 abstract final class ApiPaths {
   static const login = '/api/auth/login';
   static const register = '/api/auth/register';
+  static const captcha = '/api/auth/captcha';
 
   static const books = '/api/books';
   static const categories = '/api/categories';

@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth_controller.dart';
+import '../../../data/models/auth/captcha.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +19,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _captchaController = TextEditingController();
+  Captcha? _captcha;
+  bool _captchaLoading = false;
+  String? _captchaError;
   bool _obscurePassword = true;
   bool _agreed = false;
 
@@ -22,7 +30,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _captchaController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCaptcha());
+  }
+
+  Future<void> _refreshCaptcha() async {
+    if (!mounted) return;
+    setState(() {
+      _captchaLoading = true;
+      _captchaError = null;
+      _captchaController.clear();
+    });
+    try {
+      final captcha = await ref.read(authControllerProvider.notifier).loadCaptcha();
+      if (!mounted) return;
+      setState(() => _captcha = captcha);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _captcha = null;
+        _captchaError = '验证码加载失败，请点击刷新重试';
+      });
+    } finally {
+      if (mounted) setState(() => _captchaLoading = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -35,15 +72,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ).showSnackBar(const SnackBar(content: Text('请先阅读并同意服务条款与隐私政策')));
       return;
     }
+    final captcha = _captcha;
+    if (captcha == null) {
+      await _refreshCaptcha();
+      return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     final success = await ref
         .read(authControllerProvider.notifier)
         .login(
           username: _usernameController.text.trim(),
           password: _passwordController.text,
+          captchaId: captcha.captchaId,
+          captchaCode: _captchaController.text.trim(),
         );
     if (success && mounted) {
       context.go('/books');
+    } else if (mounted) {
+      await _refreshCaptcha();
     }
   }
 
@@ -109,6 +155,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
+              CaptchaField(
+                captcha: _captcha,
+                controller: _captchaController,
+                loading: _captchaLoading,
+                errorMessage: _captchaError,
+                onRefresh: _refreshCaptcha,
+              ),
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
@@ -166,6 +220,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _captchaController = TextEditingController();
+  Captcha? _captcha;
+  bool _captchaLoading = false;
+  String? _captchaError;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreed = false;
@@ -178,7 +236,36 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _captchaController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCaptcha());
+  }
+
+  Future<void> _refreshCaptcha() async {
+    if (!mounted) return;
+    setState(() {
+      _captchaLoading = true;
+      _captchaError = null;
+      _captchaController.clear();
+    });
+    try {
+      final captcha = await ref.read(authControllerProvider.notifier).loadCaptcha();
+      if (!mounted) return;
+      setState(() => _captcha = captcha);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _captcha = null;
+        _captchaError = '验证码加载失败，请点击刷新重试';
+      });
+    } finally {
+      if (mounted) setState(() => _captchaLoading = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -191,6 +278,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       ).showSnackBar(const SnackBar(content: Text('请先阅读并同意服务条款与隐私政策')));
       return;
     }
+    final captcha = _captcha;
+    if (captcha == null) {
+      await _refreshCaptcha();
+      return;
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     final success = await ref
         .read(authControllerProvider.notifier)
@@ -200,9 +292,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           nickname: _nicknameController.text.trim(),
           email: _emailController.text.trim(),
           phone: _phoneController.text.trim(),
+          captchaId: captcha.captchaId,
+          captchaCode: _captchaController.text.trim(),
         );
     if (success && mounted) {
       context.go('/books');
+    } else if (mounted) {
+      await _refreshCaptcha();
     }
   }
 
@@ -335,6 +431,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              CaptchaField(
+                captcha: _captcha,
+                controller: _captchaController,
+                loading: _captchaLoading,
+                errorMessage: _captchaError,
+                onRefresh: _refreshCaptcha,
               ),
               if (authState.errorMessage != null) ...[
                 const SizedBox(height: 14),
@@ -789,6 +893,116 @@ class AuthField extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class CaptchaField extends StatelessWidget {
+  const CaptchaField({
+    required this.captcha,
+    required this.controller,
+    required this.loading,
+    required this.onRefresh,
+    this.errorMessage,
+    super.key,
+  });
+
+  final Captcha? captcha;
+  final TextEditingController controller;
+  final bool loading;
+  final String? errorMessage;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = _imageBytes(captcha?.imageBase64);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 140,
+              height: 48,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AuthColors.canvas,
+                border: Border.all(color: AuthColors.line),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : imageBytes == null
+                  ? const Text(
+                      '验证码不可用',
+                      style: TextStyle(
+                        color: AuthColors.placeholder,
+                        fontSize: 12,
+                      ),
+                    )
+                  : Image.memory(
+                      imageBytes,
+                      width: 140,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, _, _) => const Text(
+                        '验证码不可用',
+                        style: TextStyle(
+                          color: AuthColors.placeholder,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: '刷新验证码',
+              onPressed: loading ? null : onRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+        if (errorMessage != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            errorMessage!,
+            style: const TextStyle(color: Color(0xFFB74D42), fontSize: 11),
+          ),
+        ],
+        const SizedBox(height: 12),
+        AuthField(
+          controller: controller,
+          label: '验证码',
+          hintText: '请输入图片中的字符',
+          prefixIcon: Icons.verified_outlined,
+          textInputAction: TextInputAction.next,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return '请输入验证码';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Uint8List? _imageBytes(String? encoded) {
+    if (encoded == null || encoded.isEmpty) return null;
+    final value = encoded.startsWith('data:image/png;base64,')
+        ? encoded.substring('data:image/png;base64,'.length)
+        : encoded;
+    try {
+      return base64Decode(value);
+    } on FormatException {
+      return null;
+    }
   }
 }
 

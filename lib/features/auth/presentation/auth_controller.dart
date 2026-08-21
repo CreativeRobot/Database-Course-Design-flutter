@@ -8,6 +8,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../data/models/auth/auth_session.dart';
+import '../../../data/models/auth/captcha.dart';
 import '../data/auth_repository.dart';
 
 enum AuthStatus { checking, unauthenticated, loading, authenticated }
@@ -94,9 +95,23 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> login({required String username, required String password}) {
+  Future<Captcha> loadCaptcha() {
+    return _repository.fetchCaptcha();
+  }
+
+  Future<bool> login({
+    required String username,
+    required String password,
+    required String captchaId,
+    required String captchaCode,
+  }) {
     return _runAuth(() {
-      return _repository.login(username: username, password: password);
+      return _repository.login(
+        username: username,
+        password: password,
+        captchaId: captchaId,
+        captchaCode: captchaCode,
+      );
     });
   }
 
@@ -106,6 +121,8 @@ class AuthController extends StateNotifier<AuthState> {
     String? nickname,
     String? email,
     String? phone,
+    required String captchaId,
+    required String captchaCode,
   }) {
     return _runAuth(() {
       return _repository.register(
@@ -114,6 +131,8 @@ class AuthController extends StateNotifier<AuthState> {
         nickname: nickname,
         email: email,
         phone: phone,
+        captchaId: captchaId,
+        captchaCode: captchaCode,
       );
     });
   }
