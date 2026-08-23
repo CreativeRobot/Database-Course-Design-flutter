@@ -5,7 +5,7 @@ import 'network/api_client.dart';
 import 'storage/token_storage.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) {
-  return const AppConfig();
+  return AppConfig.fromDartDefines();
 });
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {

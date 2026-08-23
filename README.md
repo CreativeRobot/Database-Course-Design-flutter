@@ -1,17 +1,36 @@
 # flutter_application_bookstore
 
-A new Flutter project.
+Flutter client for the BookStore API.
 
-## Getting Started
+## API environments
 
-This project is a starting point for a Flutter application.
+The app reads its API address from compile-time `--dart-define` values.
+`APP_ENV` accepts `development`, `staging`, or `production` and defaults to
+`development`. Only development can omit `API_BASE_URL`; it then uses
+`http://localhost:8080`.
 
-A few resources to get you started if this is your first Flutter project:
+Run against a backend on this computer:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Run on an Android emulator (where the host machine is `10.0.2.2`):
+
+```powershell
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+Run against staging:
+
+```powershell
+flutter run --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://staging-api.example.com
+```
+
+Run against production:
+
+```powershell
+flutter run --dart-define=APP_ENV=production --dart-define=API_BASE_URL=https://api.example.com
+```
+
+For staging and production, `API_BASE_URL` must be an absolute HTTP(S) URL.
