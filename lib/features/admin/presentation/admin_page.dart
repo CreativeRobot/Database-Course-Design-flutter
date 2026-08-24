@@ -57,14 +57,14 @@ class AdminPage extends ConsumerWidget {
                   _TopBar(section: section),
                   Expanded(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
+                      duration: const Duration(milliseconds: 280),
                       switchInCurve: Curves.easeOutCubic,
                       switchOutCurve: Curves.easeInCubic,
                       transitionBuilder: (child, animation) => FadeTransition(
                         opacity: animation,
                         child: SlideTransition(
                           position: Tween<Offset>(
-                            begin: const Offset(.018, 0),
+                            begin: const Offset(.012, 0),
                             end: Offset.zero,
                           ).animate(animation),
                           child: child,
@@ -159,24 +159,9 @@ class _AdminNav extends ConsumerWidget {
                   for (final item in AdminSection.values)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: ListTile(
+                      child: _AdminNavItem(
+                        item: item,
                         selected: selected == item,
-                        selectedTileColor: Colors.white.withValues(alpha: .12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        leading: Icon(
-                          item.icon,
-                          color: Colors.white70,
-                          size: 20,
-                        ),
-                        title: Text(
-                          item.label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
                         onTap: () {
                           Navigator.maybePop(context);
                           context.go('/admin/${item.path}');
@@ -223,6 +208,80 @@ class _AdminNav extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminNavItem extends StatelessWidget {
+  const _AdminNavItem({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AdminSection item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOutCubic,
+      decoration: BoxDecoration(
+        color: selected
+            ? Colors.white.withValues(alpha: .12)
+            : Colors.transparent,
+        border: Border.all(
+          color: selected
+              ? Colors.white.withValues(alpha: .18)
+              : Colors.transparent,
+        ),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(7),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            child: Row(
+              children: [
+                TweenAnimationBuilder<Color?>(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeInOutCubic,
+                  tween: ColorTween(
+                    begin: Colors.white70,
+                    end: selected ? Colors.white : Colors.white70,
+                  ),
+                  builder: (_, color, __) => Icon(
+                    item.icon,
+                    color: color,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOutCubic,
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.white70,
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    child: Text(item.label),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

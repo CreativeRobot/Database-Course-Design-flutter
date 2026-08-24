@@ -36,3 +36,25 @@ Complete the approved homepage recommendation frontend on the `recommend` branch
 ## Execution Blocker
 
 - None. The dependency cache was resolved with network access and all final verification commands completed from the mapped checkout.
+
+---
+
+# API 环境、认证拒绝响应与路由拆分
+
+## Goal
+
+在不改变既有 API 路径和业务权限边界的前提下，统一后端 401/403 JSON 拒绝响应，集中 Flutter 多环境 API 配置，并将路由定义与权限跳转逻辑从单一 Router 拆分为可测试模块。
+
+## Plan
+
+- [in_progress] 1. 只读核对 Flutter 网络层、登录状态、Router 和后端 Security 认证拒绝响应的现状。
+- [pending] 2. 向用户提交兼容性设计并取得明确批准。
+- [pending] 3. 先编写失败测试，覆盖 API 环境解析、路由守卫和认证拒绝响应序列化。
+- [pending] 4. 实施最小重构：集中环境配置、拆分 routes/guards、提取后端安全错误响应写入器。
+- [pending] 5. 运行聚焦测试、静态分析、Maven 测试和差异检查。
+
+## Constraints
+
+- 仅在用户批准设计后修改业务/生产代码。
+- 不重置、删除或覆盖已有未提交改动。
+- 保持现有 API 成功与错误字段、路由地址和服务端权限校验兼容；前端路由守卫不替代后端授权。

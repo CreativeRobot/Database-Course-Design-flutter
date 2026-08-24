@@ -17,3 +17,8 @@
 - Full mapped-drive Flutter suite passed: `All tests passed!` with 25 tests.
 - Mapped-drive Chrome startup passed (`flutter run -d chrome --web-port 7357`); the debug service connected and the process exited cleanly.
 - Final whitespace check passed; ready for the requested single frontend commit.
+
+## 2026-08-23
+
+- 收到后续架构改造请求：统一手写 JSON 拒绝响应、支持 Flutter 多环境 API 地址、拆分集中式 Router 的权限判断。
+- 已按架构级任务开始只读调查；尚未修改任何业务/生产代码，等待完成现状核对并提交设计供用户确认。

@@ -8,9 +8,7 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/book/book.dart';
-import '../../../data/models/book/book_filter_option.dart';
 import '../../../data/models/book/book_review.dart';
-import '../../../data/models/book/category.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
@@ -74,6 +72,8 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                   child: _BooksHeader(
                     compact: compact,
                     session: session,
+                    searchController: _searchController,
+                    onSearch: _search,
                     onCart: () => _protectedAction(context, '/cart'),
                     onAdmin: () => _protectedAction(context, '/admin'),
                     onOrders: () => _protectedAction(context, '/orders'),
@@ -93,8 +93,6 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                       _BooksHero(
                         compact: compact,
                         total: state.total,
-                        searchController: _searchController,
-                        onSearch: _search,
                       ),
                       if (session?.role != 'ADMIN') ...[
                         const SizedBox(height: 34),
@@ -118,53 +116,6 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                           ),
                       ],
                       const SizedBox(height: 36),
-                      _CategoryBar(
-                        categories: state.categories,
-                        selectedCategoryId: state.categoryId,
-                        onSelected: (categoryId) {
-                          ref
-                              .read(booksControllerProvider.notifier)
-                              .loadBooks(
-                                keyword: '',
-                                categoryId: categoryId,
-                                clearCategory: categoryId == null,
-                              );
-                          _searchController.clear();
-                        },
-                      ),
-                      const SizedBox(height: 30),
-                      _BookFilters(
-                        sortBy: state.sortBy,
-                        inStock: state.inStock,
-                        authors: state.authors,
-                        publishers: state.publishers,
-                        authorId: state.authorId,
-                        publisherId: state.publisherId,
-                        onAuthor: (value) => ref
-                            .read(booksControllerProvider.notifier)
-                            .loadBooks(
-                              authorId: value,
-                              clearAuthor: value == null,
-                            ),
-                        onPublisher: (value) => ref
-                            .read(booksControllerProvider.notifier)
-                            .loadBooks(
-                              publisherId: value,
-                              clearPublisher: value == null,
-                            ),
-                        minPrice: state.minPrice,
-                        maxPrice: state.maxPrice,
-                        onPrice: (min, max) => ref
-                            .read(booksControllerProvider.notifier)
-                            .loadBooks(minPrice: min, maxPrice: max),
-                        onSort: (value) => ref
-                            .read(booksControllerProvider.notifier)
-                            .loadBooks(sortBy: value),
-                        onStock: (value) => ref
-                            .read(booksControllerProvider.notifier)
-                            .loadBooks(inStock: value),
-                      ),
-                      const SizedBox(height: 18),
                       if (state.errorMessage != null &&
                           state.books.isNotEmpty) ...[
                         _InlineNotice(message: state.errorMessage!),
@@ -324,103 +275,12 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
   }
 }
 
-class _BookFilters extends StatelessWidget {
-  const _BookFilters({
-    required this.sortBy,
-    required this.inStock,
-    required this.onSort,
-    required this.onStock,
-    required this.minPrice,
-    required this.maxPrice,
-    required this.onPrice,
-    required this.authors,
-    required this.publishers,
-    required this.authorId,
-    required this.publisherId,
-    required this.onAuthor,
-    required this.onPublisher,
-  });
-  final String sortBy;
-  final bool inStock;
-  final ValueChanged<String> onSort;
-  final ValueChanged<bool> onStock;
-  final double? minPrice;
-  final double? maxPrice;
-  final void Function(double?, double?) onPrice;
-  final List<BookFilterOption> authors;
-  final List<BookFilterOption> publishers;
-  final int? authorId;
-  final int? publisherId;
-  final ValueChanged<int?> onAuthor;
-  final ValueChanged<int?> onPublisher;
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 12,
-    runSpacing: 8,
-    crossAxisAlignment: WrapCrossAlignment.center,
-    children: [
-      DropdownButton<String>(
-        value: sortBy,
-        items: const [
-          DropdownMenuItem(value: 'latest', child: Text('最新上架')),
-          DropdownMenuItem(value: 'price', child: Text('价格排序')),
-          DropdownMenuItem(value: 'sales', child: Text('销量排序')),
-        ],
-        onChanged: (value) {
-          if (value != null) onSort(value);
-        },
-      ),
-      DropdownButton<int?>(
-        value: authorId,
-        hint: const Text('全部作者'),
-        items: [
-          const DropdownMenuItem<int?>(value: null, child: Text('全部作者')),
-          ...authors.map(
-            (item) => DropdownMenuItem(value: item.id, child: Text(item.name)),
-          ),
-        ],
-        onChanged: onAuthor,
-      ),
-      DropdownButton<int?>(
-        value: publisherId,
-        hint: const Text('全部出版社'),
-        items: [
-          const DropdownMenuItem<int?>(value: null, child: Text('全部出版社')),
-          ...publishers.map(
-            (item) => DropdownMenuItem(value: item.id, child: Text(item.name)),
-          ),
-        ],
-        onChanged: onPublisher,
-      ),
-      FilterChip(
-        label: const Text('只看有库存'),
-        selected: inStock,
-        onSelected: onStock,
-      ),
-      SizedBox(
-        width: 110,
-        child: TextField(
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: '最低价', isDense: true),
-          onSubmitted: (value) => onPrice(double.tryParse(value), maxPrice),
-        ),
-      ),
-      SizedBox(
-        width: 110,
-        child: TextField(
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: '最高价', isDense: true),
-          onSubmitted: (value) => onPrice(minPrice, double.tryParse(value)),
-        ),
-      ),
-    ],
-  );
-}
-
 class _BooksHeader extends StatelessWidget {
   const _BooksHeader({
     required this.compact,
     required this.session,
+    required this.searchController,
+    required this.onSearch,
     required this.onCart,
     required this.onAdmin,
     required this.onOrders,
@@ -430,6 +290,8 @@ class _BooksHeader extends StatelessWidget {
 
   final bool compact;
   final AuthSession? session;
+  final TextEditingController searchController;
+  final VoidCallback onSearch;
   final VoidCallback onCart;
   final VoidCallback onAdmin;
   final VoidCallback onOrders;
@@ -442,84 +304,105 @@ class _BooksHeader extends StatelessWidget {
     final isAdmin = isAuthenticated && session!.role == 'ADMIN';
     return Padding(
       padding: EdgeInsets.fromLTRB(compact ? 20 : 56, 18, compact ? 20 : 56, 0),
-      child: Row(
+      child: Column(
         children: [
-          const _BookStoreMark(),
-          const SizedBox(width: 12),
-          const Text(
-            '书间',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const Spacer(),
-          if (!compact) ...[
-            TextButton.icon(
-              onPressed: onCart,
-              icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-              label: const Text('购物车'),
-            ),
-            if (isAdmin) ...[
-              TextButton.icon(
-                onPressed: onAdmin,
-                icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
-                label: const Text('管理台'),
-              ),
-            ],
-            TextButton.icon(
-              onPressed: onOrders,
-              icon: const Icon(Icons.receipt_long_outlined, size: 18),
-              label: const Text('订单'),
-            ),
-            const SizedBox(width: 10),
-          ],
-          if (isAuthenticated)
-            Tooltip(
-              message: '个人中心',
-              child: InkWell(
-                onTap: onProfile,
-                borderRadius: BorderRadius.circular(22),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 17,
-                        backgroundColor: BookStoreColors.sand,
-                        child: Text(
-                          _initialOf(
-                            session!.nickname.isNotEmpty
-                                ? session!.nickname
-                                : session!.username,
-                          ),
-                          style: const TextStyle(
-                            color: BookStoreColors.ink,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      if (!compact) ...[
-                        const SizedBox(width: 9),
-                        Text(
-                          session!.nickname.isNotEmpty
-                              ? session!.nickname
-                              : session!.username,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const Icon(Icons.keyboard_arrow_down_rounded),
-                      ],
-                    ],
-                  ),
+          Row(
+            children: [
+              const _BookStoreMark(),
+              const SizedBox(width: 12),
+              const Text(
+                '书间',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
                 ),
               ),
-            )
-          else
-            TextButton(onPressed: onLogin, child: const Text('登录 / 注册')),
+              const Spacer(),
+              if (!compact) ...[
+                SizedBox(
+                  width: 260,
+                  child: _HeaderSearch(
+                    controller: searchController,
+                    onSearch: onSearch,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton.icon(
+                  onPressed: onCart,
+                  icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                  label: const Text('购物车'),
+                ),
+                if (isAdmin) ...[
+                  TextButton.icon(
+                    onPressed: onAdmin,
+                    icon: const Icon(
+                      Icons.admin_panel_settings_outlined,
+                      size: 18,
+                    ),
+                    label: const Text('管理台'),
+                  ),
+                ],
+                TextButton.icon(
+                  onPressed: onOrders,
+                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                  label: const Text('订单'),
+                ),
+                const SizedBox(width: 10),
+              ],
+              if (isAuthenticated)
+                Tooltip(
+                  message: '个人中心',
+                  child: InkWell(
+                    onTap: onProfile,
+                    borderRadius: BorderRadius.circular(22),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 17,
+                            backgroundColor: BookStoreColors.sand,
+                            child: Text(
+                              _initialOf(
+                                session!.nickname.isNotEmpty
+                                    ? session!.nickname
+                                    : session!.username,
+                              ),
+                              style: const TextStyle(
+                                color: BookStoreColors.ink,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (!compact) ...[
+                            const SizedBox(width: 9),
+                            Text(
+                              session!.nickname.isNotEmpty
+                                  ? session!.nickname
+                                  : session!.username,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Icon(Icons.keyboard_arrow_down_rounded),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                TextButton(onPressed: onLogin, child: const Text('登录 / 注册')),
+            ],
+          ),
+          if (compact) ...[
+            const SizedBox(height: 14),
+            _HeaderSearch(controller: searchController, onSearch: onSearch),
+          ],
         ],
       ),
     );
@@ -531,18 +414,50 @@ class _BooksHeader extends StatelessWidget {
   }
 }
 
+class _HeaderSearch extends StatelessWidget {
+  const _HeaderSearch({required this.controller, required this.onSearch});
+
+  final TextEditingController controller;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onSubmitted: (_) => onSearch(),
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: '搜索书名',
+        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+        suffixIcon: IconButton(
+          tooltip: '搜索',
+          onPressed: onSearch,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+        ),
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        border: const OutlineInputBorder(
+          borderSide: BorderSide(color: BookStoreColors.line),
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: BookStoreColors.line),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: BookStoreColors.ink),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        hintStyle: const TextStyle(color: BookStoreColors.placeholder),
+      ),
+    );
+  }
+}
+
 class _BooksHero extends StatelessWidget {
-  const _BooksHero({
-    required this.compact,
-    required this.total,
-    required this.searchController,
-    required this.onSearch,
-  });
+  const _BooksHero({required this.compact, required this.total});
 
   final bool compact;
   final int total;
-  final TextEditingController searchController;
-  final VoidCallback onSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +465,7 @@ class _BooksHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'BOOKS  ·  在线书库',
+          'BOOKS  ·  在线书店',
           style: TextStyle(
             color: BookStoreColors.muted,
             fontSize: 12,
@@ -593,105 +508,7 @@ class _BooksHero extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 28),
-        Container(
-          constraints: const BoxConstraints(maxWidth: 760),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: BookStoreColors.line),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TextField(
-            controller: searchController,
-            onSubmitted: (_) => onSearch(),
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: '搜索书名，例如：数据库、文学、设计',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: IconButton(
-                tooltip: '搜索',
-                onPressed: onSearch,
-                icon: const Icon(Icons.arrow_forward_rounded),
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 17,
-              ),
-              hintStyle: const TextStyle(color: BookStoreColors.placeholder),
-            ),
-          ),
-        ),
       ],
-    );
-  }
-}
-
-class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({
-    required this.categories,
-    required this.selectedCategoryId,
-    required this.onSelected,
-  });
-
-  final List<BookCategory> categories;
-  final int? selectedCategoryId;
-  final ValueChanged<int?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 42,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _CategoryChip(
-            label: '全部',
-            selected: selectedCategoryId == null,
-            onTap: () => onSelected(null),
-          ),
-          ...categories.map(
-            (category) => _CategoryChip(
-              label: category.name,
-              selected: selectedCategoryId == category.id,
-              onTap: () => onSelected(category.id),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        labelStyle: TextStyle(
-          color: selected ? Colors.white : BookStoreColors.muted,
-          fontWeight: FontWeight.w600,
-        ),
-        selectedColor: BookStoreColors.ink,
-        backgroundColor: Colors.white,
-        side: const BorderSide(color: BookStoreColors.line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        showCheckmark: false,
-      ),
     );
   }
 }

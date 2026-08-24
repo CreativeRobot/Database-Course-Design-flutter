@@ -5,8 +5,6 @@ import '../../../core/providers.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/book/book_review.dart';
-import '../../../data/models/book/category.dart';
-import '../../../data/models/book/book_filter_option.dart';
 import '../data/book_repository.dart';
 
 enum BooksStatus { initial, loading, refreshing, success, failure }
@@ -15,18 +13,6 @@ class BooksState {
   const BooksState({
     this.status = BooksStatus.initial,
     this.books = const [],
-    this.categories = const [],
-    this.authors = const [],
-    this.publishers = const [],
-    this.keyword = '',
-    this.categoryId,
-    this.authorId,
-    this.publisherId,
-    this.minPrice,
-    this.maxPrice,
-    this.inStock = false,
-    this.sortBy = 'latest',
-    this.direction = 'desc',
     this.page = 1,
     this.total = 0,
     this.totalPages = 0,
@@ -35,18 +21,6 @@ class BooksState {
 
   final BooksStatus status;
   final List<Book> books;
-  final List<BookCategory> categories;
-  final List<BookFilterOption> authors;
-  final List<BookFilterOption> publishers;
-  final String keyword;
-  final int? categoryId;
-  final int? authorId;
-  final int? publisherId;
-  final double? minPrice;
-  final double? maxPrice;
-  final bool inStock;
-  final String sortBy;
-  final String direction;
   final int page;
   final int total;
   final int totalPages;
@@ -57,21 +31,6 @@ class BooksState {
   BooksState copyWith({
     BooksStatus? status,
     List<Book>? books,
-    List<BookCategory>? categories,
-    List<BookFilterOption>? authors,
-    List<BookFilterOption>? publishers,
-    String? keyword,
-    int? categoryId,
-    bool clearCategory = false,
-    bool clearAuthor = false,
-    bool clearPublisher = false,
-    int? authorId,
-    int? publisherId,
-    double? minPrice,
-    double? maxPrice,
-    bool? inStock,
-    String? sortBy,
-    String? direction,
     int? page,
     int? total,
     int? totalPages,
@@ -81,18 +40,6 @@ class BooksState {
     return BooksState(
       status: status ?? this.status,
       books: books ?? this.books,
-      categories: categories ?? this.categories,
-      authors: authors ?? this.authors,
-      publishers: publishers ?? this.publishers,
-      keyword: keyword ?? this.keyword,
-      categoryId: clearCategory ? null : categoryId ?? this.categoryId,
-      authorId: clearAuthor ? null : authorId ?? this.authorId,
-      publisherId: clearPublisher ? null : publisherId ?? this.publisherId,
-      minPrice: minPrice ?? this.minPrice,
-      maxPrice: maxPrice ?? this.maxPrice,
-      inStock: inStock ?? this.inStock,
-      sortBy: sortBy ?? this.sortBy,
-      direction: direction ?? this.direction,
       page: page ?? this.page,
       total: total ?? this.total,
       totalPages: totalPages ?? this.totalPages,
@@ -110,61 +57,17 @@ class BooksController extends StateNotifier<BooksState> {
     if (state.status != BooksStatus.initial) {
       return;
     }
-    await Future.wait([
-      loadBooks(),
-      loadCategories(),
-      loadAuthors(),
-      loadPublishers(),
-    ]);
+    await loadBooks();
   }
 
-  Future<void> loadBooks({
-    String? keyword,
-    int? categoryId,
-    bool clearCategory = false,
-    bool clearAuthor = false,
-    bool clearPublisher = false,
-    int? authorId,
-    int? publisherId,
-    double? minPrice,
-    double? maxPrice,
-    bool? inStock,
-    String? sortBy,
-    String? direction,
-  }) async {
-    final nextKeyword = keyword ?? state.keyword;
-    final nextCategoryId = clearCategory
-        ? null
-        : categoryId ?? state.categoryId;
+  Future<void> loadBooks() async {
     final hasExistingBooks = state.books.isNotEmpty;
     state = state.copyWith(
       status: hasExistingBooks ? BooksStatus.refreshing : BooksStatus.loading,
-      keyword: nextKeyword,
-      categoryId: nextCategoryId,
-      clearCategory: clearCategory,
-      clearAuthor: clearAuthor,
-      clearPublisher: clearPublisher,
       clearError: true,
-      authorId: authorId,
-      publisherId: publisherId,
-      minPrice: minPrice,
-      maxPrice: maxPrice,
-      inStock: inStock,
-      sortBy: sortBy,
-      direction: direction,
     );
     try {
-      final result = await _repository.getBooks(
-        keyword: nextKeyword,
-        categoryId: nextCategoryId,
-        authorId: state.authorId,
-        publisherId: state.publisherId,
-        minPrice: state.minPrice,
-        maxPrice: state.maxPrice,
-        inStock: state.inStock,
-        sortBy: state.sortBy,
-        direction: state.direction,
-      );
+      final result = await _repository.getBooks();
       state = state.copyWith(
         status: BooksStatus.success,
         books: result.records,
@@ -192,18 +95,7 @@ class BooksController extends StateNotifier<BooksState> {
       return;
     }
     try {
-      final result = await _repository.getBooks(
-        keyword: state.keyword,
-        categoryId: state.categoryId,
-        authorId: state.authorId,
-        publisherId: state.publisherId,
-        minPrice: state.minPrice,
-        maxPrice: state.maxPrice,
-        inStock: state.inStock,
-        sortBy: state.sortBy,
-        direction: state.direction,
-        page: state.page + 1,
-      );
+      final result = await _repository.getBooks(page: state.page + 1);
       state = state.copyWith(
         status: BooksStatus.success,
         books: [...state.books, ...result.records],
@@ -211,33 +103,6 @@ class BooksController extends StateNotifier<BooksState> {
         total: result.total,
         totalPages: result.totalPages,
       );
-    } on ApiException catch (error) {
-      state = state.copyWith(errorMessage: _friendlyMessage(error));
-    }
-  }
-
-  Future<void> loadCategories() async {
-    try {
-      final categories = await _repository.getCategories();
-      state = state.copyWith(categories: categories);
-    } on ApiException catch (error) {
-      state = state.copyWith(errorMessage: _friendlyMessage(error));
-    } catch (_) {
-      state = state.copyWith(errorMessage: '分类暂时无法加载');
-    }
-  }
-
-  Future<void> loadAuthors() async {
-    try {
-      state = state.copyWith(authors: await _repository.getAuthors());
-    } on ApiException catch (error) {
-      state = state.copyWith(errorMessage: _friendlyMessage(error));
-    }
-  }
-
-  Future<void> loadPublishers() async {
-    try {
-      state = state.copyWith(publishers: await _repository.getPublishers());
     } on ApiException catch (error) {
       state = state.copyWith(errorMessage: _friendlyMessage(error));
     }

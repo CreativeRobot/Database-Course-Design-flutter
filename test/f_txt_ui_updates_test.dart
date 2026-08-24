@@ -22,6 +22,12 @@ void main() {
     expect(adminSource, contains('SlideTransition('));
   });
 
+  test('admin navigation softens selected item changes', () {
+    expect(adminSource, contains('AnimatedContainer('));
+    expect(adminSource, contains('Curves.easeInOutCubic'));
+    expect(adminSource, contains('border: Border.all'));
+  });
+
   test(
     'book header opens profile directly instead of showing an account menu',
     () {
