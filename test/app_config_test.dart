@@ -2,10 +2,20 @@ import 'package:flutter_application_bookstore/core/config/app_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('development uses localhost when no API base URL is supplied', () {
-    final config = AppConfig.fromValues(environment: 'development');
+  test('requires an API base URL for development', () {
+    expect(
+      () => AppConfig.fromValues(environment: 'development'),
+      throwsA(isA<StateError>()),
+    );
+  });
 
-    expect(config.baseUrl, 'http://localhost:8080');
+  test('accepts an explicit development API base URL', () {
+    final config = AppConfig.fromValues(
+      environment: 'development',
+      apiBaseUrl: 'http://10.0.2.2:8080',
+    );
+
+    expect(config.baseUrl, 'http://10.0.2.2:8080');
   });
 
   test('normalizes an explicit HTTPS API base URL', () {
@@ -15,6 +25,16 @@ void main() {
     );
 
     expect(config.baseUrl, 'https://api.example.com');
+  });
+
+  test('requires HTTPS for production API base URLs', () {
+    expect(
+      () => AppConfig.fromValues(
+        environment: 'production',
+        apiBaseUrl: 'http://api.example.com',
+      ),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('requires an API base URL outside development', () {

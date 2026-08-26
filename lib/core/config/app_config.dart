@@ -21,12 +21,6 @@ class AppConfig {
     final parsedEnvironment = AppEnvironment.parse(environment);
     final candidate = apiBaseUrl?.trim() ?? '';
     if (candidate.isEmpty) {
-      if (parsedEnvironment == AppEnvironment.development) {
-        return AppConfig(
-          baseUrl: 'http://localhost:8080',
-          environment: parsedEnvironment,
-        );
-      }
       throw StateError(
         'API_BASE_URL is required when APP_ENV is ${parsedEnvironment.name}',
       );
@@ -39,6 +33,10 @@ class AppConfig {
       throw StateError('API_BASE_URL must be an absolute HTTP(S) URL');
     }
 
+    if (parsedEnvironment == AppEnvironment.production &&
+        uri.scheme != 'https') {
+      throw StateError('Production API_BASE_URL must use HTTPS');
+    }
     return AppConfig(
       baseUrl: candidate.replaceFirst(RegExp(r'/+$'), ''),
       environment: parsedEnvironment,
