@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
@@ -11,6 +12,7 @@ import '../../../data/models/common/page_response.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../data/admin_models.dart';
 import '../data/admin_repository.dart';
+import 'admin_book_filter.dart';
 import 'admin_page.dart';
 import 'admin_providers.dart';
 
@@ -25,7 +27,16 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
   int _page = 1;
   @override
   Widget build(BuildContext context) {
-    final value = ref.watch(adminBooksProvider((status: _status, page: _page)));
+    final filter = ref.watch(adminBookFilterProvider);
+    final value = ref.watch(
+      adminBooksProvider((
+        status: _status,
+        authorId: filter?.authorId,
+        publisherId: filter?.publisherId,
+        categoryId: filter?.categoryId,
+        page: _page,
+      )),
+    );
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     return AdminPageBody(
       child: Column(
@@ -46,6 +57,16 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
               onChanged: (value) => setState(() => _status = value),
             ),
           ),
+          if (filter != null) ...[
+            const SizedBox(height: 12),
+            _BookFilterNotice(
+              label: filter.managementLabel,
+              onClear: () {
+                setState(() => _page = 1);
+                ref.read(adminBookFilterProvider.notifier).state = null;
+              },
+            ),
+          ],
           const SizedBox(height: 16),
           AdminPanel(
             child: AdminAsync(
@@ -82,8 +103,18 @@ class _AdminBooksPageState extends ConsumerState<AdminBooksPage> {
     );
   }
 
-  void _refresh() =>
-      ref.invalidate(adminBooksProvider((status: _status, page: _page)));
+  void _refresh() {
+    final filter = ref.read(adminBookFilterProvider);
+    ref.invalidate(
+      adminBooksProvider((
+        status: _status,
+        authorId: filter?.authorId,
+        publisherId: filter?.publisherId,
+        categoryId: filter?.categoryId,
+        page: _page,
+      )),
+    );
+  }
 
   Future<void> _edit([Book? book]) async {
     final repo = ref.read(adminRepositoryProvider);
@@ -609,9 +640,18 @@ class _AdminAuthorsPageState extends ConsumerState<AdminAuthorsPage> {
     onPage: (v) => setState(() => page = v),
     onRefresh: () =>
         ref.invalidate(adminAuthorsProvider((keyword: keyword, page: page))),
+    bookFilter: (author) =>
+        AdminBookFilter.author(id: author.id, name: author.name),
+    onViewBooks: _viewBooks,
     onEdit: _edit,
     onDelete: _delete,
   );
+
+  void _viewBooks(AdminBookFilter filter) {
+    ref.read(adminBookFilterProvider.notifier).state = filter;
+    context.go('/admin/${AdminSection.books.path}');
+  }
+
   Future<void> _edit([AdminAuthor? value]) async {
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -666,9 +706,18 @@ class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
     onPage: (v) => setState(() => page = v),
     onRefresh: () =>
         ref.invalidate(adminPublishersProvider((keyword: keyword, page: page))),
+    bookFilter: (publisher) =>
+        AdminBookFilter.publisher(id: publisher.id, name: publisher.name),
+    onViewBooks: _viewBooks,
     onEdit: _edit,
     onDelete: _delete,
   );
+
+  void _viewBooks(AdminBookFilter filter) {
+    ref.read(adminBookFilterProvider.notifier).state = filter;
+    context.go('/admin/${AdminSection.books.path}');
+  }
+
   Future<void> _edit([AdminPublisher? value]) async {
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -748,6 +797,7 @@ class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
                               onToggle: _toggle,
                               onEdit: _edit,
                               onDelete: _delete,
+                              onViewBooks: _viewBooks,
                             ),
                           )
                           .toList(),
@@ -775,6 +825,17 @@ class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
+  }
+
+  void _viewBooks(AdminCategory item) {
+    final name = item.parentName == null || item.parentName!.isEmpty
+        ? item.name
+        : '${item.parentName} / ${item.name}';
+    ref.read(adminBookFilterProvider.notifier).state = AdminBookFilter.category(
+      id: item.id,
+      name: name,
+    );
+    context.go('/admin/${AdminSection.books.path}');
   }
 
   Future<void> _toggle(AdminCategory item) async {
@@ -811,6 +872,7 @@ class _CategoryTreeNode extends StatelessWidget {
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
+    required this.onViewBooks,
     this.depth = 0,
   });
 
@@ -818,6 +880,7 @@ class _CategoryTreeNode extends StatelessWidget {
   final ValueChanged<AdminCategory> onToggle;
   final ValueChanged<AdminCategory> onEdit;
   final ValueChanged<AdminCategory> onDelete;
+  final ValueChanged<AdminCategory> onViewBooks;
   final int depth;
 
   @override
@@ -835,6 +898,11 @@ class _CategoryTreeNode extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _StateTag(active: item.status == 1, on: '启用', off: '停用'),
+        IconButton(
+          tooltip: '查看图书',
+          onPressed: () => onViewBooks(item),
+          icon: const Icon(Icons.menu_book_outlined),
+        ),
         IconButton(
           tooltip: '启停',
           onPressed: () => onToggle(item),
@@ -878,6 +946,7 @@ class _CategoryTreeNode extends StatelessWidget {
               onToggle: onToggle,
               onEdit: onEdit,
               onDelete: onDelete,
+              onViewBooks: onViewBooks,
               depth: depth + 1,
             ),
           )
@@ -897,6 +966,8 @@ class _SimpleEntityPage<T> extends StatelessWidget {
     required this.onRefresh,
     required this.onEdit,
     required this.onDelete,
+    this.bookFilter,
+    this.onViewBooks,
   });
   final String title;
   final AsyncValue<PageResponse<T>> value;
@@ -907,73 +978,119 @@ class _SimpleEntityPage<T> extends StatelessWidget {
   final VoidCallback onRefresh;
   final void Function([T?]) onEdit;
   final ValueChanged<T> onDelete;
+  final AdminBookFilter Function(T)? bookFilter;
+  final ValueChanged<AdminBookFilter>? onViewBooks;
   @override
-  Widget build(BuildContext context) => AdminPageBody(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _PageActions(
-          title: title,
-          actionLabel: '新增',
-          onAdd: () => onEdit(),
-          trailing: SizedBox(
-            width: 230,
-            child: TextField(
-              onSubmitted: onSearch,
-              decoration: const InputDecoration(
-                hintText: '搜索后回车',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-                border: OutlineInputBorder(),
+  Widget build(BuildContext context) {
+    final createBookFilter = bookFilter;
+    final viewBooks = onViewBooks;
+    return AdminPageBody(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PageActions(
+            title: title,
+            actionLabel: '新增',
+            onAdd: () => onEdit(),
+            trailing: SizedBox(
+              width: 230,
+              child: TextField(
+                onSubmitted: onSearch,
+                decoration: const InputDecoration(
+                  hintText: '搜索后回车',
+                  prefixIcon: Icon(Icons.search),
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        AdminPanel(
-          child: AdminAsync(
-            value: value,
-            retry: onRefresh,
-            data: (page) => page.records.isEmpty
-                ? const _Empty(text: '暂无数据')
-                : Column(
-                    children: [
-                      ...page.records
-                          .map(
-                            (item) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                name(item),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+          const SizedBox(height: 16),
+          AdminPanel(
+            child: AdminAsync(
+              value: value,
+              retry: onRefresh,
+              data: (page) => page.records.isEmpty
+                  ? const _Empty(text: '暂无数据')
+                  : Column(
+                      children: [
+                        ...page.records
+                            .map(
+                              (item) => ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  name(item),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  subtitle(item),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: Wrap(
+                                  children: [
+                                    if (createBookFilter != null &&
+                                        viewBooks != null)
+                                      IconButton(
+                                        tooltip: '查看图书',
+                                        onPressed: () =>
+                                            viewBooks(createBookFilter(item)),
+                                        icon: const Icon(
+                                          Icons.menu_book_outlined,
+                                        ),
+                                      ),
+                                    IconButton(
+                                      tooltip: '编辑',
+                                      onPressed: () => onEdit(item),
+                                      icon: const Icon(Icons.edit_outlined),
+                                    ),
+                                    IconButton(
+                                      tooltip: '删除',
+                                      onPressed: () => onDelete(item),
+                                      icon: const Icon(Icons.delete_outline),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              subtitle: Text(
-                                subtitle(item),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: Wrap(
-                                children: [
-                                  IconButton(
-                                    tooltip: '编辑',
-                                    onPressed: () => onEdit(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    tooltip: '删除',
-                                    onPressed: () => onDelete(item),
-                                    icon: const Icon(Icons.delete_outline),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      AdminPagination(page: page, onPage: onPage),
-                    ],
-                  ),
+                            )
+                            .toList(),
+                        AdminPagination(page: page, onPage: onPage),
+                      ],
+                    ),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookFilterNotice extends StatelessWidget {
+  const _BookFilterNotice({required this.label, required this.onClear});
+
+  final String label;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F7F3),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFFB9D7C5)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.filter_alt_outlined, size: 18),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label)),
+        TextButton.icon(
+          onPressed: onClear,
+          icon: const Icon(Icons.clear, size: 16),
+          label: const Text('查看全部图书'),
         ),
       ],
     ),

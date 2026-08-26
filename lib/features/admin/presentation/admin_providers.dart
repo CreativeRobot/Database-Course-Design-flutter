@@ -7,6 +7,7 @@ import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
 import '../data/admin_models.dart';
 import '../data/admin_repository.dart';
+import 'admin_book_filter.dart';
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
   return AdminRepository(ref.watch(apiClientProvider));
@@ -18,11 +19,28 @@ final adminStatisticsProvider = FutureProvider.autoDispose<AdminStatistics>((
   return ref.watch(adminRepositoryProvider).statistics();
 });
 
+final adminBookFilterProvider = StateProvider<AdminBookFilter?>((ref) => null);
+
 final adminBooksProvider = FutureProvider.autoDispose
-    .family<PageResponse<Book>, ({String? status, int page})>((ref, key) async {
+    .family<
+      PageResponse<Book>,
+      ({
+        String? status,
+        int? authorId,
+        int? publisherId,
+        int? categoryId,
+        int page,
+      })
+    >((ref, key) async {
       return ref
           .watch(adminRepositoryProvider)
-          .books(status: key.status, page: key.page);
+          .books(
+            status: key.status,
+            authorId: key.authorId,
+            publisherId: key.publisherId,
+            categoryId: key.categoryId,
+            page: key.page,
+          );
     });
 
 final adminAuthorsProvider = FutureProvider.autoDispose

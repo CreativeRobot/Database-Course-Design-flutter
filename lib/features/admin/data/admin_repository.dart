@@ -18,12 +18,18 @@ class AdminRepository {
 
   Future<PageResponse<Book>> books({
     String? status,
+    int? authorId,
+    int? publisherId,
+    int? categoryId,
     int page = 1,
     int size = 20,
   }) async => (await _api.get(
     ApiPaths.adminBooks,
     queryParameters: {
       if (status != null) 'status': status,
+      if (authorId != null) 'authorId': authorId,
+      if (publisherId != null) 'publisherId': publisherId,
+      if (categoryId != null) 'categoryId': categoryId,
       'page': page,
       'size': size,
     },

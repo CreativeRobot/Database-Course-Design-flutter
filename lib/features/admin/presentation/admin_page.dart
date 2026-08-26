@@ -6,6 +6,7 @@ import '../../../core/errors/app_error.dart';
 
 import '../../auth/presentation/auth_controller.dart';
 import 'admin_catalog_pages.dart';
+import 'admin_providers.dart';
 import 'admin_orders_reviews_pages.dart';
 import 'admin_overview_page.dart';
 
@@ -164,6 +165,10 @@ class _AdminNav extends ConsumerWidget {
                         selected: selected == item,
                         onTap: () {
                           Navigator.maybePop(context);
+                          if (item == AdminSection.books) {
+                            ref.read(adminBookFilterProvider.notifier).state =
+                                null;
+                          }
                           context.go('/admin/${item.path}');
                         },
                       ),
@@ -247,10 +252,7 @@ class _AdminNavItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(7),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 TweenAnimationBuilder<Color?>(
@@ -260,11 +262,8 @@ class _AdminNavItem extends StatelessWidget {
                     begin: Colors.white70,
                     end: selected ? Colors.white : Colors.white70,
                   ),
-                  builder: (_, color, __) => Icon(
-                    item.icon,
-                    color: color,
-                    size: 20,
-                  ),
+                  builder: (_, color, __) =>
+                      Icon(item.icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
