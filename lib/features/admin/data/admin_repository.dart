@@ -29,10 +29,12 @@ class AdminRepository {
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: Book.fromJson),
   )).data;
+
   Future<BookDetail> book(int id) async => (await _api.get(
     ApiPaths.adminBook(id),
     parser: BookDetail.fromJson,
   )).data;
+
   Future<BookDetail> saveBook(Map<String, dynamic> data, {int? id}) async =>
       id == null
       ? (await _api.post(
@@ -45,6 +47,7 @@ class AdminRepository {
           data: data,
           parser: BookDetail.fromJson,
         )).data;
+
   Future<void> setBookStatus(int id, String status) async {
     await _api.put(ApiPaths.adminBookStatus(id), data: {'status': status});
   }
@@ -78,6 +81,7 @@ class AdminRepository {
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: AdminAuthor.fromJson),
   )).data;
+
   Future<void> saveAuthor(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminAuthors, data: data);
@@ -103,6 +107,7 @@ class AdminRepository {
     parser: (v) =>
         PageResponse.fromJson(v, itemParser: AdminPublisher.fromJson),
   )).data;
+
   Future<void> savePublisher(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminPublishers, data: data);
@@ -122,6 +127,17 @@ class AdminRepository {
           return v.map(AdminCategory.fromJson).toList(growable: false);
         },
       )).data;
+
+  Future<List<AdminCategory>> categoryTree({int? status}) async =>
+      (await _api.get(
+        ApiPaths.adminCategoriesTree,
+        queryParameters: {if (status != null) 'status': status},
+        parser: (v) {
+          if (v is! List) throw const FormatException('分类树响应必须是数组');
+          return v.map(AdminCategory.fromJson).toList(growable: false);
+        },
+      )).data;
+
   Future<void> saveCategory(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
       await _api.post(ApiPaths.adminCategories, data: data);
@@ -154,10 +170,12 @@ class AdminRepository {
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: BookOrder.fromJson),
   )).data;
+
   Future<BookOrder> order(int id) async => (await _api.get(
     ApiPaths.adminOrder(id),
     parser: BookOrder.fromJson,
   )).data;
+
   Future<void> shipOrder(int id) async {
     await _api.put(ApiPaths.adminShipOrder(id));
   }
@@ -179,6 +197,7 @@ class AdminRepository {
     },
     parser: (v) => PageResponse.fromJson(v, itemParser: UserReview.fromJson),
   )).data;
+
   Future<void> setReviewStatus(int id, int status) async {
     await _api.put(ApiPaths.adminReviewStatus(id), data: {'status': status});
   }

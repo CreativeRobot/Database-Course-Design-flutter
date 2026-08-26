@@ -52,6 +52,7 @@ abstract final class ApiPaths {
   static String adminPublisher(int id) => '$adminPublishers/$id';
 
   static const adminCategories = '$admin/categories';
+  static const adminCategoriesTree = '$adminCategories/tree';
   static String adminCategory(int id) => '$adminCategories/$id';
   static String adminCategoryStatus(int id) => '${adminCategory(id)}/status';
 

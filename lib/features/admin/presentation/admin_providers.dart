@@ -50,6 +50,10 @@ final adminCategoriesProvider = FutureProvider.autoDispose
       return ref.watch(adminRepositoryProvider).categories(status: status);
     });
 
+final adminCategoryTreeProvider = FutureProvider.autoDispose
+    .family<List<AdminCategory>, int?>((ref, status) {
+      return ref.watch(adminRepositoryProvider).categoryTree(status: status);
+    });
 typedef AdminOrderFilter = ({
   String orderNo,
   int? userId,

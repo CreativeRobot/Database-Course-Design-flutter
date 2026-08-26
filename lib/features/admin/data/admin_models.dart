@@ -161,7 +161,9 @@ class AdminCategory {
     required this.status,
     this.parentId,
     this.parentName,
+    this.children = const [],
   });
+
   factory AdminCategory.fromJson(dynamic json) {
     final map = _map(json, '分类');
     return AdminCategory(
@@ -171,12 +173,19 @@ class AdminCategory {
       parentName: map['parentName'] as String?,
       sortOrder: _int(map['sortOrder']),
       status: _int(map['status'], fallback: 1),
+      children:
+          (map['children'] as List?)
+              ?.map(AdminCategory.fromJson)
+              .toList(growable: false) ??
+          const [],
     );
   }
+
   final int id;
   final String name;
   final int? parentId;
   final String? parentName;
+  final List<AdminCategory> children;
   final int sortOrder;
   final int status;
 }

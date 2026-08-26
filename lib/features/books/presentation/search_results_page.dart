@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
+import '../../../data/models/book/category_hierarchy.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import 'book_catalog_grid.dart';
 import 'search_results_controller.dart';
@@ -194,6 +195,14 @@ class _SearchFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hierarchy = CategoryHierarchy(state.categories);
+    final selectedCategory = hierarchy.findById(state.categoryId);
+    final selectedRootId = selectedCategory == null
+        ? null
+        : selectedCategory.parentId ?? selectedCategory.id;
+    final selectedChildId = selectedCategory?.parentId == selectedRootId
+        ? state.categoryId
+        : null;
     return Wrap(
       spacing: 12,
       runSpacing: 8,
@@ -211,9 +220,16 @@ class _SearchFilters extends StatelessWidget {
           },
         ),
         _optionDropdown(
-          value: state.categoryId,
-          hint: '全部分类',
-          options: state.categories
+          value: selectedRootId,
+          hint: '全部一级分类',
+          options: hierarchy.roots.map((item) => (item.id, item.name)).toList(),
+          onChanged: onCategory,
+        ),
+        _optionDropdown(
+          value: selectedChildId,
+          hint: '全部二级分类',
+          options: hierarchy
+              .childrenOf(selectedRootId)
               .map((item) => (item.id, item.name))
               .toList(),
           onChanged: onCategory,

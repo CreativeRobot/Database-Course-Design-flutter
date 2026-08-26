@@ -43,12 +43,20 @@ void main() {
 
   test('category and inventory log keep management relationships', () {
     final category = AdminCategory.fromJson({
-      'id': 3,
-      'name': '数据库',
-      'parentId': 1,
-      'parentName': '计算机',
-      'sortOrder': 2,
+      'id': 1,
+      'name': '计算机',
+      'sortOrder': 1,
       'status': 1,
+      'children': [
+        {
+          'id': 3,
+          'name': '数据库',
+          'parentId': 1,
+          'parentName': '计算机',
+          'sortOrder': 2,
+          'status': 1,
+        },
+      ],
     });
     final log = InventoryLog.fromJson({
       'id': 8,
@@ -65,7 +73,7 @@ void main() {
       'createTime': '2026-08-13T10:20:00',
     });
 
-    expect(category.parentName, '计算机');
+    expect(category.children.single.parentName, '计算机');
     expect(log.orderId, 6);
     expect(log.changeQuantity, -1);
     expect(log.createTime, isNotNull);

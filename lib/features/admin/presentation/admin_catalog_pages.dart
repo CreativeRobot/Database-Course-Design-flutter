@@ -703,6 +703,7 @@ class _AdminPublishersPageState extends ConsumerState<AdminPublishersPage> {
 
 class AdminCategoriesPage extends ConsumerStatefulWidget {
   const AdminCategoriesPage({super.key});
+
   @override
   ConsumerState<AdminCategoriesPage> createState() =>
       _AdminCategoriesPageState();
@@ -710,9 +711,10 @@ class AdminCategoriesPage extends ConsumerStatefulWidget {
 
 class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
   int? status;
+
   @override
   Widget build(BuildContext context) {
-    final value = ref.watch(adminCategoriesProvider(status));
+    final value = ref.watch(adminCategoryTreeProvider(status));
     return AdminPageBody(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,38 +743,11 @@ class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
                   : Column(
                       children: items
                           .map(
-                            (item) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.folder_outlined),
-                              title: Text(item.name),
-                              subtitle: Text(
-                                '上级：${item.parentName ?? '无'} · 排序 ${item.sortOrder}',
-                              ),
-                              trailing: Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  _StateTag(
-                                    active: item.status == 1,
-                                    on: '启用',
-                                    off: '停用',
-                                  ),
-                                  IconButton(
-                                    tooltip: '启停',
-                                    onPressed: () => _toggle(item),
-                                    icon: const Icon(Icons.power_settings_new),
-                                  ),
-                                  IconButton(
-                                    tooltip: '编辑',
-                                    onPressed: () => _edit(item),
-                                    icon: const Icon(Icons.edit_outlined),
-                                  ),
-                                  IconButton(
-                                    tooltip: '删除',
-                                    onPressed: () => _delete(item),
-                                    icon: const Icon(Icons.delete_outline),
-                                  ),
-                                ],
-                              ),
+                            (item) => _CategoryTreeNode(
+                              item: item,
+                              onToggle: _toggle,
+                              onEdit: _edit,
+                              onDelete: _delete,
                             ),
                           )
                           .toList(),
@@ -784,7 +759,8 @@ class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
     );
   }
 
-  void _refresh() => ref.invalidate(adminCategoriesProvider(status));
+  void _refresh() => ref.invalidate(adminCategoryTreeProvider(status));
+
   Future<void> _edit([AdminCategory? item]) async {
     final all = await ref.read(adminRepositoryProvider).categories();
     if (!mounted) return;
@@ -817,14 +793,96 @@ class _AdminCategoriesPageState extends ConsumerState<AdminCategoriesPage> {
       context,
       title: '删除分类',
       message: '确定删除“${item.name}”吗？',
-    ))
+    )) {
       return;
+    }
     try {
       await ref.read(adminRepositoryProvider).deleteCategory(item.id);
       _refresh();
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }
+  }
+}
+
+class _CategoryTreeNode extends StatelessWidget {
+  const _CategoryTreeNode({
+    required this.item,
+    required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
+    this.depth = 0,
+  });
+
+  final AdminCategory item;
+  final ValueChanged<AdminCategory> onToggle;
+  final ValueChanged<AdminCategory> onEdit;
+  final ValueChanged<AdminCategory> onDelete;
+  final int depth;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Text(
+      item.name,
+      style: depth == 0 ? const TextStyle(fontWeight: FontWeight.w700) : null,
+    );
+    final subtitle = Text(
+      depth == 0
+          ? '一级分类 · 排序 ${item.sortOrder}'
+          : '二级分类 · 排序 ${item.sortOrder}',
+    );
+    final actions = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _StateTag(active: item.status == 1, on: '启用', off: '停用'),
+        IconButton(
+          tooltip: '启停',
+          onPressed: () => onToggle(item),
+          icon: const Icon(Icons.power_settings_new),
+        ),
+        IconButton(
+          tooltip: '编辑',
+          onPressed: () => onEdit(item),
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        IconButton(
+          tooltip: '删除',
+          onPressed: () => onDelete(item),
+          icon: const Icon(Icons.delete_outline),
+        ),
+      ],
+    );
+
+    if (item.children.isEmpty) {
+      return ListTile(
+        contentPadding: EdgeInsets.only(left: depth * 28),
+        leading: Icon(
+          depth == 0 ? Icons.folder_outlined : Icons.subdirectory_arrow_right,
+        ),
+        title: title,
+        subtitle: subtitle,
+        trailing: actions,
+      );
+    }
+
+    return ExpansionTile(
+      tilePadding: EdgeInsets.only(left: depth * 28),
+      leading: const Icon(Icons.folder_outlined),
+      title: title,
+      subtitle: subtitle,
+      trailing: actions,
+      children: item.children
+          .map(
+            (child) => _CategoryTreeNode(
+              item: child,
+              onToggle: onToggle,
+              onEdit: onEdit,
+              onDelete: onDelete,
+              depth: depth + 1,
+            ),
+          )
+          .toList(),
+    );
   }
 }
 
@@ -1039,6 +1097,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController sort;
   int? parentId;
   int status = 1;
+
   @override
   void initState() {
     super.initState();
@@ -1056,77 +1115,97 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.item == null ? '新增分类' : '编辑分类'),
-    content: SizedBox(
-      width: 430,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: name,
-            decoration: const InputDecoration(
-              labelText: '分类名称',
-              border: OutlineInputBorder(),
+  Widget build(BuildContext context) {
+    final hasChildren = widget.categories.any(
+      (category) => category.parentId == widget.item?.id,
+    );
+    final parentOptions = widget.categories
+        .where(
+          (category) =>
+              category.parentId == null && category.id != widget.item?.id,
+        )
+        .toList();
+
+    return AlertDialog(
+      title: Text(widget.item == null ? '新增分类' : '编辑分类'),
+      content: SizedBox(
+        width: 430,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: name,
+              decoration: const InputDecoration(
+                labelText: '分类名称',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int?>(
-            initialValue: parentId,
-            decoration: const InputDecoration(
-              labelText: '上级分类',
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('无上级分类')),
-              ...widget.categories
-                  .where((e) => e.id != widget.item?.id)
-                  .map(
-                    (e) => DropdownMenuItem(value: e.id, child: Text(e.name)),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int?>(
+              initialValue: parentId,
+              decoration: const InputDecoration(
+                labelText: '上级分类（仅可选择一级分类）',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('无上级分类')),
+                ...parentOptions.map(
+                  (category) => DropdownMenuItem(
+                    value: category.id,
+                    child: Text(category.name),
                   ),
-            ],
-            onChanged: (v) => setState(() => parentId = v),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: sort,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: '排序值',
-              border: OutlineInputBorder(),
+                ),
+              ],
+              onChanged: hasChildren
+                  ? null
+                  : (value) => setState(() => parentId = value),
             ),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 1, label: Text('启用')),
-              ButtonSegment(value: 0, label: Text('停用')),
+            if (hasChildren) ...[
+              const SizedBox(height: 8),
+              const Text('包含二级分类的一级分类不能设置上级分类。'),
             ],
-            selected: {status},
-            onSelectionChanged: (v) => setState(() => status = v.first),
-          ),
-        ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: sort,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '排序值',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 1, label: Text('启用')),
+                ButtonSegment(value: 0, label: Text('停用')),
+              ],
+              selected: {status},
+              onSelectionChanged: (value) =>
+                  setState(() => status = value.first),
+            ),
+          ],
+        ),
       ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
-      ),
-      FilledButton(
-        onPressed: () {
-          if (name.text.trim().isEmpty) return;
-          Navigator.pop(context, {
-            'name': name.text.trim(),
-            'parentId': parentId,
-            'sortOrder': int.tryParse(sort.text) ?? 0,
-            'status': status,
-          });
-        },
-        child: const Text('保存'),
-      ),
-    ],
-  );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (name.text.trim().isEmpty) return;
+            Navigator.pop(context, {
+              'name': name.text.trim(),
+              'parentId': parentId,
+              'sortOrder': int.tryParse(sort.text) ?? 0,
+              'status': status,
+            });
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    );
+  }
 }
 
 class _PageActions extends StatelessWidget {
