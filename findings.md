@@ -1,24 +1,15 @@
 # Findings
 
-- The approved design is in `docs/superpowers/specs/2026-08-19-home-recommendations-design.md`.
-- The branch already contains `RecommendationHome` and `RecommendationBook` models plus tests that describe the missing repository, controller, and widget.
-- `BooksPage` is the storefront home surface and already supplies the API base URL and book-detail navigation.
-- Existing `ApiClient` automatically attaches the current bearer token to requests.
-- The user's mapped-drive test output confirmed the intended red phase: model tests passed while missing recommendation repository/controller/section files caused the other tests to fail at compile time.
-- The current production implementation uses the existing `BookRepository` for an isolated search provider keyed by the route's initial keyword; filters and pagination do not share `BooksController` state.
-- The first post-implementation analyzer run exposed only two feature errors: a duplicated provider declaration and an unconstrained dropdown helper generic. The widget test exposed a missing Material ancestor around `InkWell`; all three were localized and corrected.
-- The subsequent user rerun showed the focused recommendation suite passing (`+3`) and exposed only stale generic call-site errors, now corrected.
-- Final user analyzer output has no errors; remaining 56 diagnostics are pre-existing style/lint items outside this feature. Local whitespace validation passes.
-- Final verification from the mapped `X:` checkout succeeded: `flutter pub get`, full `flutter test` (25 tests), and Chrome startup all completed successfully.
-- The direct `D:\no game\Code` path is unsuitable for Flutter native-asset compilation because its spaces are split by the Windows toolchain; the existing `X:` mapping is the supported execution path.
-
-## 2026-08-23: API 环境、认证拒绝响应与路由拆分（调查中）
-
-- 本工作区 `D:\no game\Code\DatabaseHomework\BookStore_Flutter` 只是容器目录；实际 Flutter Git 仓库为其子目录 `flutter_application_bookstore`。
-- 子仓库属于本机用户 `COMPUTER/liyil`，而当前沙箱用户不同；Git 在未配置临时安全目录前会拒绝读取状态。后续只做本仓库作用域的 Git 安全目录配置，绝不写全局配置。
-- 该目录中已有上一项推荐功能的计划与验证记录；本项工作以追加章节方式保留历史，不覆盖已有记录。
-- 当前 `AppConfig` 仅支持单一 `API_BASE_URL`，默认固定为 `http://localhost:8080`；没有环境名、平台开发地址映射、URL 校验或统一运行命令说明。
-- 当前 Router 在 `app_router.dart` 内同时持有 13 类路由、动态参数解析、管理员子路由循环、认证状态订阅及所有登录/角色重定向规则，正是 R1 的集中点。
-- `AuthState` 已提供可复用的 `isAuthenticated` 和 `session.role`，且 Router 通过 Riverpod 监听认证变化；拆分应保留这一状态来源而不把权限信息复制到页面层。
-- 后端 `SecurityConfig`、`JwtAuthenticationFilter` 与仍存在的 `JwtInterceptor` 分别手写 JSON 拒绝响应；前两者产生同一 `Result` 形状，401 的 `WWW-Authenticate` / `Cache-Control` 细节却不一致。
-- 现有 Filter 测试只断言 401 且非空，未锁定 `code/message/data`、响应头和 JSON 序列化契约；本项应先补足这些回归测试，再将三处逻辑委托给统一写入器。
+- 2026-08-26：本功能开始前，Flutter 工作区干净；已建立空基线提交 `63e26be`。
+- 待确认：图书管理页当前是否已有作者、出版社与分类筛选参数，以及路由如何传递页面参数。
+- 2026-08-26：`rg.exe` 被沙箱拒绝启动，后续代码搜索改用 PowerShell 原生命令。
+- 现有 `AdminBooksPage`、作者/出版社/分类页面均位于 `lib/features/admin/presentation/admin_catalog_pages.dart`。
+- `AdminPage` 以 `AdminSection` 切换各管理面板，而不是为每个管理项使用独立路由。
+- `AdminRepository.books` 与 `adminBooksProvider` 是图书管理列表的数据入口；下一步需确认其参数是否已经覆盖作者、出版社和分类。
+- `AdminPage` 通过 `AdminSection` 在单个管理台 Scaffold 内切换内容；进入图书管理应传递一个页面级筛选上下文，而非 GoRouter 新路由。
+- 当前 Flutter `AdminRepository.books` 与 `adminBooksProvider` 只传 `status/page`，前端需要扩展作者、出版社、分类参数。
+- 后端检索结果过宽被截断；下一步将直接读取管理员图书控制器和服务方法，确认其现有筛选能力。
+- 管理端后端 `GET /api/admin/books` 当前只支持 `status/page/size`，因此“查看某作者/出版社/分类图书”需要扩展管理员图书查询 API 及 `BookService.listAllBooks`。
+- 公共图书搜索已有作者、出版社、分类谓词；分类筛选使用 `resolveSearchCategoryIds`，可复用以满足一级分类包含直属二级分类的规则。
+- Flutter 已使用 Riverpod。最小改动是新增持久的 `AdminBookFilter` 状态，在作者/出版社/分类点击操作时写入状态并切换到 `AdminSection.books`；图书页据此查询并提供清除筛选。
+- 2026-08-26：直接执行 `dart test` 无法使用间接依赖的 `package:test`（项目只声明 `flutter_test`）。不增加依赖；保留 Flutter 标准测试文件，并以无依赖的 Dart 断言脚本验证核心 filter helper 的 RED/GREEN。

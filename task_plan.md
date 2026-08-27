@@ -1,60 +1,38 @@
-# Homepage Recommendations
+# Task Plan: 管理台关联图书快捷管理
 
 ## Goal
+在作者、出版社和分类管理项中增加“查看图书”入口，跳转至现有图书管理页并自动应用相应筛选，保留编辑、上下架与删除能力。
 
-Complete the approved homepage recommendation frontend on the `recommend` branch.
-
-## Plan
-
-- [completed] 1. Recover the approved recommendation contract and inspect the existing Flutter books flow.
-- [completed] 2. Confirm the existing recommendation tests fail because the repository, controller, and section are absent.
-- [completed] 3. Implement recommendation data/state, homepage presentation, and the independent search results flow.
-- [completed] 4. Run focused Flutter tests, static analysis, and Chrome startup verification from the mapped checkout.
-
-## Decisions
-
-- Use `GET /api/recommendations/home?limit=12` and the existing authenticated `ApiClient`.
-- Keep the latest successful recommendation list visible when a refresh fails.
-- Omit the section when the service returns no eligible books.
-
-## Current Implementation
-
-- Added `ApiPaths.recommendationsHome`, `RecommendationRepository`, and `RecommendationController` with refresh-state retention.
-- Added the `RecommendationBooks` homepage section and connected customer-only loading plus independent search navigation in `BooksPage`.
-- Added `SearchResultsController`, `BookCatalogGrid`, `SearchResultsPage`, and the public `/search` route with filters and pagination.
-
-## Latest Verification Findings
-
-- User analyzer output identified two new compile errors: a duplicate `searchResultsControllerProvider` and a generic dropdown value typed as `T` instead of `int?`.
-- The recommendation widget test identified a missing `Material` ancestor for `InkWell`; the component now supplies its own transparent `Material` wrapper.
-- These three issues were fixed and formatted; the mapped-drive focused tests and analyzer need one rerun.
-- The user's latest rerun reported `+3: All tests passed!`; analyzer then found three stale generic type arguments at `_optionDropdown<int?>` call sites, which are now removed.
-- The latest analyzer rerun reports 56 existing info/warning diagnostics and no errors. `git diff --check` passes.
-- Codex reran `flutter pub get` successfully with network access, then ran the full suite from `X:`: all 25 tests passed.
-- `flutter run -d chrome --web-port 7357` compiled and connected to Chrome successfully before a clean exit.
-
-## Execution Blocker
-
-- None. The dependency cache was resolved with network access and all final verification commands completed from the mapped checkout.
-
----
-
-# API 环境、认证拒绝响应与路由拆分
-
-## Goal
-
-在不改变既有 API 路径和业务权限边界的前提下，统一后端 401/403 JSON 拒绝响应，集中 Flutter 多环境 API 配置，并将路由定义与权限跳转逻辑从单一 Router 拆分为可测试模块。
-
-## Plan
-
-- [in_progress] 1. 只读核对 Flutter 网络层、登录状态、Router 和后端 Security 认证拒绝响应的现状。
-- [pending] 2. 向用户提交兼容性设计并取得明确批准。
-- [pending] 3. 先编写失败测试，覆盖 API 环境解析、路由守卫和认证拒绝响应序列化。
-- [pending] 4. 实施最小重构：集中环境配置、拆分 routes/guards、提取后端安全错误响应写入器。
-- [pending] 5. 运行聚焦测试、静态分析、Maven 测试和差异检查。
+## Phases
+- [x] 建立干净基线提交：`63e26be`
+- [ ] 调研现有管理台列表、图书管理页和路由/筛选状态
+- [ ] 编写并运行失败的筛选上下文单元测试（RED）
+- [ ] 实现筛选上下文、导航入口与图书页筛选说明（GREEN）
+- [ ] 执行格式化、静态分析和可运行测试
+- [ ] 提交功能改动
 
 ## Constraints
+- 复用现有图书管理页，不新建重复管理页。
+- 作者、出版社、分类入口均能传递筛选条件。
+- 一级分类筛选必须沿用后端的直属二级分类展开规则。
+- 不改动后端数据模型或 API 合同，除非调研发现现有管理列表接口缺少必要筛选。
 
-- 仅在用户批准设计后修改业务/生产代码。
-- 不重置、删除或覆盖已有未提交改动。
-- 保持现有 API 成功与错误字段、路由地址和服务端权限校验兼容；前端路由守卫不替代后端授权。
+## Errors Encountered
+| Error | Attempt | Resolution |
+|---|---:|---|
+| 无 | 0 | — |
+
+## Errors Encountered (continued)
+| Error | Attempt | Resolution |
+|---|---:|---|
+| `dart test` cannot find direct `package:test` dependency | 1 | Keep the project-standard `flutter_test` file for later; add a dependency-free executable assertion script to observe the required RED/GREEN cycle with the installed Dart SDK. |
+
+## Errors Encountered (continued)
+| Error | Attempt | Resolution |
+|---|---:|---|
+| Batch source edit stopped because a category action snippet did not match exactly | 1 | Earlier independent replacements were written; inspect the partial diff, then apply the remaining category and generic-list edits using line-targeted replacements. Do not rerun the batch. |
+
+## Errors Encountered (continued)
+| Error | Attempt | Resolution |
+|---|---:|---|
+| Dart analyzer found one required-argument error and two unused locals in `admin_catalog_pages.dart` | 1 | Diagnose the generated generic-list and category-recursion call sites before changing code; runtime filter-helper assertions already pass. |
