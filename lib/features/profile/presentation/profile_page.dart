@@ -10,6 +10,7 @@ import '../../../core/utils/media_url.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../cart/presentation/commerce_widgets.dart';
 import '../../orders/data/order_models.dart';
 import '../../orders/presentation/orders_controller.dart';
 import 'profile_controller.dart';
@@ -324,7 +325,7 @@ class _ProfileSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _ProfileBrand(),
+          const BookstoreBrand(),
           const SizedBox(height: 34),
           if (profile != null) ...[
             Row(
@@ -404,7 +405,7 @@ class _MobileHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       child: Row(
         children: [
-          const _ProfileBrand(),
+          const BookstoreBrand(),
           const Spacer(),
           IconButton(
             tooltip: '\u8fd4\u56de\u4e66\u5e97',
@@ -472,42 +473,6 @@ class _MobileSectionBar extends StatelessWidget {
             })
             .toList(growable: false),
       ),
-    );
-  }
-}
-
-class _ProfileBrand extends StatelessWidget {
-  const _ProfileBrand();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: ProfileColors.line),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text(
-            '\u518c',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-        ),
-        const SizedBox(width: 11),
-        const Text(
-          '\u4e66\u95f4',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.4,
-          ),
-        ),
-      ],
     );
   }
 }

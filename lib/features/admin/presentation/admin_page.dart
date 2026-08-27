@@ -115,11 +115,6 @@ class _TopBar extends StatelessWidget {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const Spacer(),
-          OutlinedButton.icon(
-            onPressed: () => context.go('/books'),
-            icon: const Icon(Icons.storefront_outlined, size: 17),
-            label: const Text('查看商城'),
-          ),
         ],
       ),
     );

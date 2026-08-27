@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'books_controller.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
@@ -30,7 +31,7 @@ class _BooksPageState extends ConsumerState<BooksPage> {
     super.initState();
     Future<void>.microtask(() {
       final auth = ref.read(authControllerProvider);
-      if (auth.isAuthenticated && auth.session?.role != 'ADMIN') {
+      if (auth.session?.role != 'ADMIN') {
         ref.read(recommendationControllerProvider.notifier).load();
       }
     });
@@ -85,16 +86,7 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      if (session == null)
-                        CommerceEmptyState(
-                          icon: Icons.auto_stories_outlined,
-                          message: '登录后查看专属推荐',
-                          action: OutlinedButton(
-                            onPressed: () => context.go('/login'),
-                            child: const Text('立即登录'),
-                          ),
-                        )
-                      else if (session.role == 'ADMIN')
+                      if (session?.role == 'ADMIN')
                         CommerceEmptyState(
                           icon: Icons.admin_panel_settings_outlined,
                           message: '管理员请进入管理台',
@@ -281,16 +273,7 @@ class _BooksHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const _BookStoreMark(),
-              const SizedBox(width: 12),
-              const Text(
-                '书间',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.4,
-                ),
-              ),
+              const BookstoreBrand(),
               const Spacer(),
               if (!compact) ...[
                 SizedBox(
@@ -1169,32 +1152,6 @@ class _CoverPlaceholder extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BookStoreMark extends StatelessWidget {
-  const _BookStoreMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 34,
-      height: 34,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: BookStoreColors.line),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Text(
-        '册',
-        style: TextStyle(
-          color: BookStoreColors.ink,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
