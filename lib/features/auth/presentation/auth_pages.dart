@@ -4,9 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_controller.dart';
+import '../../../app/router/app_route_guard.dart';
+import 'login_captcha_policy.dart';
 import '../../../data/models/auth/captcha.dart';
+import '../../cart/presentation/commerce_widgets.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -26,6 +30,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscurePassword = true;
   bool _agreed = false;
 
+  bool _requiresCaptcha = false;
   @override
   void dispose() {
     _usernameController.dispose();
@@ -37,18 +42,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCaptcha());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _initializeCaptchaPolicy(),
+    );
+  }
+
+  Future<void> _initializeCaptchaPolicy() async {
+    final preferences = await SharedPreferences.getInstance();
+    final requiresCaptcha = await LoginCaptchaPolicy(
+      preferences,
+    ).requiresCaptcha();
+    if (!mounted) return;
+    setState(() => _requiresCaptcha = requiresCaptcha);
+    if (requiresCaptcha) {
+      await _refreshCaptcha();
+    }
   }
 
   Future<void> _refreshCaptcha() async {
-    if (!mounted) return;
+    if (!mounted || !_requiresCaptcha) return;
     setState(() {
       _captchaLoading = true;
       _captchaError = null;
       _captchaController.clear();
     });
     try {
-      final captcha = await ref.read(authControllerProvider.notifier).loadCaptcha();
+      final captcha = await ref
+          .read(authControllerProvider.notifier)
+          .loadCaptcha();
       if (!mounted) return;
       setState(() => _captcha = captcha);
     } catch (_) {
@@ -72,23 +93,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ).showSnackBar(const SnackBar(content: Text('请先阅读并同意服务条款与隐私政策')));
       return;
     }
-    final captcha = _captcha;
-    if (captcha == null) {
-      await _refreshCaptcha();
-      return;
+    Captcha? captcha;
+    if (_requiresCaptcha) {
+      captcha = _captcha;
+      if (captcha == null) {
+        await _refreshCaptcha();
+        return;
+      }
     }
     FocusManager.instance.primaryFocus?.unfocus();
+    final preferences = await SharedPreferences.getInstance();
+    final policy = LoginCaptchaPolicy(preferences);
+    await policy.recordSubmission();
+    final requiresCaptchaAfterSubmission = await policy.requiresCaptcha();
     final success = await ref
         .read(authControllerProvider.notifier)
         .login(
           username: _usernameController.text.trim(),
           password: _passwordController.text,
-          captchaId: captcha.captchaId,
-          captchaCode: _captchaController.text.trim(),
+          captchaId: captcha?.captchaId,
+          captchaCode: _requiresCaptcha ? _captchaController.text.trim() : null,
         );
-    if (success && mounted) {
-      context.go('/books');
-    } else if (mounted) {
+    var refreshedCaptchaForNextAttempt = false;
+    if (mounted && requiresCaptchaAfterSubmission != _requiresCaptcha) {
+      setState(() => _requiresCaptcha = requiresCaptchaAfterSubmission);
+      if (requiresCaptchaAfterSubmission) {
+        await _refreshCaptcha();
+        refreshedCaptchaForNextAttempt = true;
+      }
+    }
+    final session = ref.read(authControllerProvider).session;
+    if (success && mounted && session != null) {
+      context.go(destinationForRole(session.role));
+    } else if (mounted && _requiresCaptcha && !refreshedCaptchaForNextAttempt) {
       await _refreshCaptcha();
     }
   }
@@ -155,15 +192,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              CaptchaField(
-                captcha: _captcha,
-                controller: _captchaController,
-                loading: _captchaLoading,
-                errorMessage: _captchaError,
-                onRefresh: _refreshCaptcha,
-              ),
-              const SizedBox(height: 10),
+              if (_requiresCaptcha) ...[
+                const SizedBox(height: 16),
+                CaptchaField(
+                  captcha: _captcha,
+                  controller: _captchaController,
+                  loading: _captchaLoading,
+                  errorMessage: _captchaError,
+                  onRefresh: _refreshCaptcha,
+                ),
+                const SizedBox(height: 10),
+              ],
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -254,7 +293,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _captchaController.clear();
     });
     try {
-      final captcha = await ref.read(authControllerProvider.notifier).loadCaptcha();
+      final captcha = await ref
+          .read(authControllerProvider.notifier)
+          .loadCaptcha();
       if (!mounted) return;
       setState(() => _captcha = captcha);
     } catch (_) {
@@ -295,8 +336,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           captchaId: captcha.captchaId,
           captchaCode: _captchaController.text.trim(),
         );
-    if (success && mounted) {
-      context.go('/books');
+    final session = ref.read(authControllerProvider).session;
+    if (success && mounted && session != null) {
+      context.go(destinationForRole(session.role));
     } else if (mounted) {
       await _refreshCaptcha();
     }
@@ -561,17 +603,7 @@ class _AuthTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const _BrandMark(),
-        const SizedBox(width: 12),
-        const Text(
-          '书间',
-          style: TextStyle(
-            color: AuthColors.ink,
-            fontSize: 21,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.4,
-          ),
-        ),
+        const BookstoreBrand(color: AuthColors.ink, fontSize: 21),
         const Spacer(),
         if (!compact)
           TextButton.icon(
@@ -773,7 +805,7 @@ class AuthCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const _BrandMark(),
+          const BookstoreBrand(color: AuthColors.ink, fontSize: 21),
           const SizedBox(height: 18),
           Text(
             title,

@@ -102,8 +102,8 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> login({
     required String username,
     required String password,
-    required String captchaId,
-    required String captchaCode,
+    String? captchaId,
+    String? captchaCode,
   }) {
     return _runAuth(() {
       return _repository.login(

@@ -10,12 +10,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthRepository extends AuthRepository {
   _FakeAuthRepository()
-      : super(
-          ApiClient(
-            config: const AppConfig(baseUrl: 'http://127.0.0.1:1'),
-            tokenStorage: TokenStorage(),
-          ),
-        );
+    : super(
+        ApiClient(
+          config: const AppConfig(baseUrl: 'http://127.0.0.1:1'),
+          tokenStorage: TokenStorage(),
+        ),
+      );
 
   String? loginCaptchaId;
   String? loginCaptchaCode;
@@ -26,8 +26,8 @@ class _FakeAuthRepository extends AuthRepository {
   Future<AuthSession> login({
     required String username,
     required String password,
-    required String captchaId,
-    required String captchaCode,
+    String? captchaId,
+    String? captchaCode,
   }) async {
     loginCaptchaId = captchaId;
     loginCaptchaCode = captchaCode;
@@ -72,6 +72,25 @@ class _FakeAuthRepository extends AuthRepository {
 }
 
 void main() {
+  test('login can omit captcha values', () async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FakeAuthRepository();
+    final controller = AuthController(
+      repository: repository,
+      tokenStorage: TokenStorage(),
+    );
+    addTearDown(controller.dispose);
+
+    final result = await controller.login(
+      username: 'reader',
+      password: 'password',
+    );
+
+    expect(result, isTrue);
+    expect(repository.loginCaptchaId, isNull);
+    expect(repository.loginCaptchaCode, isNull);
+  });
+
   test('login forwards captcha values to the repository', () async {
     SharedPreferences.setMockInitialValues({});
     final repository = _FakeAuthRepository();

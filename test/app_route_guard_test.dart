@@ -5,6 +5,15 @@ import 'package:flutter_application_bookstore/features/auth/presentation/auth_co
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'destinationForRole sends administrators to admin and everyone else to books',
+    () {
+      expect(destinationForRole('ADMIN'), AppRoutePaths.admin);
+      expect(destinationForRole('CUSTOMER'), AppRoutePaths.books);
+      expect(destinationForRole(''), AppRoutePaths.books);
+    },
+  );
+
   test('anonymous users are redirected from customer and admin routes', () {
     const state = AuthState.unauthenticated();
 
@@ -40,21 +49,31 @@ void main() {
     },
   );
 
-  test('administrators leave auth pages and can open admin routes', () {
-    const state = AuthState.authenticated(_administratorSession);
+  test(
+    'administrators leave auth pages, skip books, and can open admin routes',
+    () {
+      const state = AuthState.authenticated(_administratorSession);
 
-    expect(
-      redirectForRoute(
-        authState: state,
-        matchedLocation: AppRoutePaths.register,
-      ),
-      AppRoutePaths.admin,
-    );
-    expect(
-      redirectForRoute(authState: state, matchedLocation: '/admin/orders'),
-      isNull,
-    );
-  });
+      expect(
+        redirectForRoute(
+          authState: state,
+          matchedLocation: AppRoutePaths.register,
+        ),
+        AppRoutePaths.admin,
+      );
+      expect(
+        redirectForRoute(
+          authState: state,
+          matchedLocation: AppRoutePaths.books,
+        ),
+        AppRoutePaths.admin,
+      );
+      expect(
+        redirectForRoute(authState: state, matchedLocation: '/admin/orders'),
+        isNull,
+      );
+    },
+  );
 
   test('checking state and public book routes do not redirect', () {
     expect(

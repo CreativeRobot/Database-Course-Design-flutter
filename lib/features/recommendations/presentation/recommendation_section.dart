@@ -42,17 +42,26 @@ class RecommendationBooks extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: home.books.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 14),
-            itemBuilder: (context, index) {
-              final book = home.books[index];
-              return SizedBox(
-                width: 190,
-                child: Material(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 1000
+                ? 4
+                : constraints.maxWidth >= 650
+                ? 3
+                : 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: .68,
+              ),
+              itemCount: home.books.length,
+              itemBuilder: (context, index) {
+                final book = home.books[index];
+                return Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => onBookTap(book.id),
@@ -106,10 +115,10 @@ class RecommendationBooks extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            );
+          },
         ),
       ],
     );

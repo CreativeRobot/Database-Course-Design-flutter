@@ -17,6 +17,41 @@ abstract final class CommerceColors {
   static const success = Color(0xFF326448);
 }
 
+class BookstoreBrand extends StatelessWidget {
+  const BookstoreBrand({
+    this.color = CommerceColors.ink,
+    this.iconSize = 22,
+    this.fontSize = 20,
+    this.spacing = 10,
+    super.key,
+  });
+
+  final Color color;
+  final double iconSize;
+  final double fontSize;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.auto_stories_outlined, color: color, size: iconSize),
+        SizedBox(width: spacing),
+        Text(
+          '书间',
+          style: TextStyle(
+            color: color,
+            fontFamily: 'serif',
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CommerceHeader extends StatelessWidget {
   const CommerceHeader({required this.current, super.key});
 
@@ -36,21 +71,7 @@ class CommerceHeader extends StatelessWidget {
             onTap: () => context.go('/books'),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.auto_stories_outlined, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    '书间',
-                    style: TextStyle(
-                      fontFamily: 'serif',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+              child: BookstoreBrand(),
             ),
           );
           if (constraints.maxWidth < 560) {
@@ -319,7 +340,7 @@ class CommerceTitle extends StatelessWidget {
   const CommerceTitle({
     required this.eyebrow,
     required this.title,
-    required this.subtitle,
+    this.subtitle = '',
     this.trailing,
     super.key,
   });
@@ -356,15 +377,17 @@ class CommerceTitle extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: CommerceColors.muted,
-                fontSize: 14,
-                height: 1.6,
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: CommerceColors.muted,
+                  fontSize: 14,
+                  height: 1.6,
+                ),
               ),
-            ),
+            ],
           ],
         );
         if (trailing == null) return heading;

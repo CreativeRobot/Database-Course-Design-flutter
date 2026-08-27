@@ -7,10 +7,10 @@ Implement the requested captcha policy, personalized storefront, role-based post
 - [completed] Confirm requirements and map existing flows.
 - [completed] Record the approved architecture specification.
 - [completed] Create the implementation plan.
-- [in_progress] Await execution-mode selection before production-code changes.
-- [pending] Write failing backend and Flutter tests.
-- [pending] Implement the agreed changes without overwriting existing work.
-- [pending] Run focused and full verification.
+- [completed] Await execution-mode selection before production-code changes.
+- [completed] Write failing backend and Flutter tests.
+- [completed] Implement the agreed changes without overwriting existing work.
+- [completed] Run focused verification and document known full-suite environment blockers.
 
 ## Constraints
 - Preserve the user's existing uncommitted changes in both repositories.
@@ -18,6 +18,15 @@ Implement the requested captcha policy, personalized storefront, role-based post
 - Captcha lifetime is five minutes.
 - Login attempts accumulate per device for a rolling 30-minute window, including successful attempts.
 - Do not begin production-code edits until the user approves the design.
+
+## Completion Notes
+
+- Forgot-password recovery remains deferred as requested; its button stays visibly disabled.
+- Login attempts are counted on the Flutter client per device in a rolling 30-minute window; captcha is shown from the fourth submission onward.
+- Registration always requires captcha, and backend captcha records remain valid for five minutes.
+- Customer and administrator destinations are role-aware; the storefront homepage now presents recommendations as its primary content.
+- The shared `BookstoreBrand` mark is used across auth, storefront, cart, and admin surfaces.
+- Returning from profile to checkout invalidates the address provider so newly saved addresses are available immediately.
 
 ## Errors Encountered
 | Error | Resolution |

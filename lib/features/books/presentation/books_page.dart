@@ -14,7 +14,6 @@ import '../../cart/presentation/cart_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../recommendations/presentation/recommendation_controller.dart';
 import '../../recommendations/presentation/recommendation_section.dart';
-import 'books_controller.dart';
 
 class BooksPage extends ConsumerStatefulWidget {
   const BooksPage({super.key});
@@ -29,9 +28,6 @@ class _BooksPageState extends ConsumerState<BooksPage> {
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(
-      () => ref.read(booksControllerProvider.notifier).loadInitial(),
-    );
     Future<void>.microtask(() {
       final auth = ref.read(authControllerProvider);
       if (auth.isAuthenticated && auth.session?.role != 'ADMIN') {
@@ -55,7 +51,6 @@ class _BooksPageState extends ConsumerState<BooksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(booksControllerProvider);
     final session = ref.watch(authControllerProvider).session;
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     final recommendation = ref.watch(recommendationControllerProvider);
@@ -90,62 +85,40 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _BooksHero(
-                        compact: compact,
-                        total: state.total,
-                      ),
-                      if (session?.role != 'ADMIN') ...[
-                        const SizedBox(height: 34),
-                        if (recommendation.home != null)
-                          RecommendationBooks(
-                            home: recommendation.home!,
-                            baseUrl: baseUrl,
-                            onBookTap: (bookId) =>
-                                context.push('/books/$bookId'),
-                          )
-                        else if (recommendation.status ==
-                            RecommendationStatus.loading)
-                          const CommerceLoadingState(message: '正在准备推荐')
-                        else if (recommendation.status ==
-                            RecommendationStatus.failure)
-                          CommerceErrorState(
-                            message: recommendation.errorMessage ?? '推荐暂时无法加载',
-                            onRetry: () => ref
-                                .read(recommendationControllerProvider.notifier)
-                                .load(),
+                      if (session == null)
+                        CommerceEmptyState(
+                          icon: Icons.auto_stories_outlined,
+                          message: '登录后查看专属推荐',
+                          action: OutlinedButton(
+                            onPressed: () => context.go('/login'),
+                            child: const Text('立即登录'),
                           ),
-                      ],
-                      const SizedBox(height: 36),
-                      if (state.errorMessage != null &&
-                          state.books.isNotEmpty) ...[
-                        _InlineNotice(message: state.errorMessage!),
-                        const SizedBox(height: 18),
-                      ],
-                      if (state.status == BooksStatus.loading &&
-                          state.books.isEmpty)
-                        const CommerceLoadingState(message: '正在加载图书')
-                      else if (state.status == BooksStatus.failure &&
-                          state.books.isEmpty)
-                        CommerceErrorState(
-                          message: state.errorMessage ?? '图书暂时无法加载',
-                          onRetry: () => ref
-                              .read(booksControllerProvider.notifier)
-                              .loadBooks(),
                         )
-                      else if (state.books.isEmpty)
-                        const _BooksEmpty()
-                      else
-                        _BooksGrid(
-                          books: state.books,
+                      else if (session.role == 'ADMIN')
+                        CommerceEmptyState(
+                          icon: Icons.admin_panel_settings_outlined,
+                          message: '管理员请进入管理台',
+                          action: OutlinedButton(
+                            onPressed: () => context.go('/admin'),
+                            child: const Text('进入管理台'),
+                          ),
+                        )
+                      else if (recommendation.home != null)
+                        RecommendationBooks(
+                          home: recommendation.home!,
                           baseUrl: baseUrl,
-                          compact: compact,
                           onBookTap: (bookId) => context.push('/books/$bookId'),
-                          onLoadMore: state.hasMore
-                              ? () => ref
-                                    .read(booksControllerProvider.notifier)
-                                    .loadMore()
-                              : null,
-                          loadingMore: state.status == BooksStatus.refreshing,
+                        )
+                      else if (recommendation.status ==
+                          RecommendationStatus.loading)
+                        const CommerceLoadingState(message: '正在准备推荐')
+                      else if (recommendation.status ==
+                          RecommendationStatus.failure)
+                        CommerceErrorState(
+                          message: recommendation.errorMessage ?? '推荐暂时无法加载',
+                          onRetry: () => ref
+                              .read(recommendationControllerProvider.notifier)
+                              .load(),
                         ),
                     ]),
                   ),
@@ -446,7 +419,10 @@ class _HeaderSearch extends StatelessWidget {
         focusedBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: BookStoreColors.ink),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 11,
+        ),
         hintStyle: const TextStyle(color: BookStoreColors.placeholder),
       ),
     );

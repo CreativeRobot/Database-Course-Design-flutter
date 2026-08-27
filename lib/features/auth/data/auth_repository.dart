@@ -23,16 +23,17 @@ class AuthRepository {
   Future<AuthSession> login({
     required String username,
     required String password,
-    required String captchaId,
-    required String captchaCode,
+    String? captchaId,
+    String? captchaCode,
   }) async {
     final response = await _apiClient.post<AuthSession>(
       ApiPaths.login,
       data: {
         'username': username,
         'password': password,
-        'captchaId': captchaId,
-        'captchaCode': captchaCode,
+        if (captchaId != null && captchaCode != null) 'captchaId': captchaId,
+        if (captchaId != null && captchaCode != null)
+          'captchaCode': captchaCode,
       },
       parser: AuthSession.fromJson,
     );

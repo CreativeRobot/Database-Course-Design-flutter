@@ -31,6 +31,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     });
   }
 
+  Future<void> _manageAddresses() async {
+    await context.push('/profile');
+    if (mounted) {
+      ref.invalidate(checkoutAddressesProvider);
+    }
+  }
+
   @override
   void dispose() {
     _remarkController.dispose();
@@ -63,7 +70,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                         CommerceTitle(
                           eyebrow: 'CHECKOUT  ·  确认订单',
                           title: '送到哪里？',
-                          subtitle: '选择收货地址并最后确认商品，订单金额由服务端重新计算。',
                           trailing: OutlinedButton.icon(
                             onPressed: () => context.pop(),
                             icon: const Icon(
@@ -96,7 +102,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                     number: '01',
                                     title: '收货地址',
                                     action: TextButton.icon(
-                                      onPressed: () => context.push('/profile'),
+                                      onPressed: _manageAddresses,
                                       icon: const Icon(
                                         Icons.settings_outlined,
                                         size: 17,
@@ -121,7 +127,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                       onSelected: (id) {
                                         setState(() => _selectedAddressId = id);
                                       },
-                                      onAdd: () => context.push('/profile'),
+                                      onAdd: _manageAddresses,
                                     ),
                                   ),
                                   const SizedBox(height: 28),

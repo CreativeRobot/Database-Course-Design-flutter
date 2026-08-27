@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter_application_bookstore/core/config/app_config.dart';
 import 'package:flutter_application_bookstore/core/network/api_client.dart';
 import 'package:flutter_application_bookstore/core/storage/token_storage.dart';
-import 'package:flutter_application_bookstore/features/auth/data/auth_repository.dart';
 import 'package:flutter_application_bookstore/data/models/auth/captcha.dart';
+import 'package:flutter_application_bookstore/features/auth/data/auth_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,27 +25,31 @@ void main() {
       });
       request.response.headers.contentType = ContentType.json;
       if (request.uri.path == '/api/auth/captcha') {
-        request.response.write(jsonEncode({
-          'code': 200,
-          'message': '操作成功',
-          'data': {
-            'captchaId': 'captcha-1',
-            'imageBase64': 'iVBORw0KGgo=',
-            'expiresInSeconds': 120,
-          },
-        }));
+        request.response.write(
+          jsonEncode({
+            'code': 200,
+            'message': '操作成功',
+            'data': {
+              'captchaId': 'captcha-1',
+              'imageBase64': 'iVBORw0KGgo=',
+              'expiresInSeconds': 120,
+            },
+          }),
+        );
       } else {
-        request.response.write(jsonEncode({
-          'code': 200,
-          'message': '操作成功',
-          'data': {
-            'id': 1,
-            'username': 'reader',
-            'nickname': 'Reader',
-            'role': 'CUSTOMER',
-            'token': 'jwt-token',
-          },
-        }));
+        request.response.write(
+          jsonEncode({
+            'code': 200,
+            'message': '操作成功',
+            'data': {
+              'id': 1,
+              'username': 'reader',
+              'nickname': 'Reader',
+              'role': 'CUSTOMER',
+              'token': 'jwt-token',
+            },
+          }),
+        );
       }
       await request.response.close();
     });
@@ -73,21 +77,46 @@ void main() {
     expect(requests.single['path'], '/api/auth/captcha');
   });
 
-  test('login sends captchaId and captchaCode', () async {
+  test('login omits captcha fields when no pair is supplied', () async {
+    await createRepository().login(username: 'reader', password: 'password');
+
+    expect(requests.single['body'], {
+      'username': 'reader',
+      'password': 'password',
+    });
+  });
+
+  test('login omits captcha fields when the pair is incomplete', () async {
     await createRepository().login(
       username: 'reader',
       password: 'password',
       captchaId: 'captcha-1',
-      captchaCode: 'A7K3P',
     );
 
     expect(requests.single['body'], {
       'username': 'reader',
       'password': 'password',
-      'captchaId': 'captcha-1',
-      'captchaCode': 'A7K3P',
     });
   });
+
+  test(
+    'login sends captchaId and captchaCode when a full pair is supplied',
+    () async {
+      await createRepository().login(
+        username: 'reader',
+        password: 'password',
+        captchaId: 'captcha-1',
+        captchaCode: 'A7K3P',
+      );
+
+      expect(requests.single['body'], {
+        'username': 'reader',
+        'password': 'password',
+        'captchaId': 'captcha-1',
+        'captchaCode': 'A7K3P',
+      });
+    },
+  );
 
   test('register sends captcha fields with optional profile fields', () async {
     await createRepository().register(

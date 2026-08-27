@@ -5,6 +5,7 @@ import '../../../data/models/common/page_response.dart';
 import '../../../core/errors/app_error.dart';
 
 import '../../auth/presentation/auth_controller.dart';
+import '../../cart/presentation/commerce_widgets.dart';
 import 'admin_catalog_pages.dart';
 import 'admin_providers.dart';
 import 'admin_orders_reviews_pages.dart';
@@ -139,18 +140,7 @@ class _AdminNav extends ConsumerWidget {
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 22, 20, 20),
               child: Row(
-                children: [
-                  Icon(Icons.auto_stories, color: Colors.white, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    '书间管理台',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                children: [BookstoreBrand(color: Colors.white, fontSize: 18)],
               ),
             ),
             Expanded(
