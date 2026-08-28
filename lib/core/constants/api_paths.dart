@@ -40,6 +40,9 @@ abstract final class ApiPaths {
 
   static const admin = '/api/admin';
 
+  static const adminUsers = '$admin/users';
+  static String adminUser(int id) => '$adminUsers/$id';
+  static String adminUserStatus(int id) => '${adminUser(id)}/status';
   static const adminBooks = '$admin/books';
   static String adminBook(int bookId) => '$adminBooks/$bookId';
   static String adminBookStatus(int bookId) => '${adminBook(bookId)}/status';
@@ -67,5 +70,8 @@ abstract final class ApiPaths {
   static String adminReviewStatus(int id) => '${adminReview(id)}/status';
 
   static const adminInventoryLogs = '$admin/inventory-logs';
+  static const adminRefunds = '$admin/refunds';
+  static String adminRefund(int id) => '$adminRefunds/$id';
+  static String adminRefundReview(int id) => '${adminRefund(id)}/review';
   static const adminImageUpload = '$admin/uploads/images';
 }

@@ -16,7 +16,35 @@ class AdminRepository {
     parser: AdminStatistics.fromJson,
   )).data;
 
+  Future<PageResponse<AdminUser>> users({
+    String? keyword,
+    int? status,
+    String? role,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
+    ApiPaths.adminUsers,
+    queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
+      if (status != null) 'status': status,
+      if (role != null && role.isNotEmpty) 'role': role,
+      'page': page,
+      'size': size,
+    },
+    parser: (v) => PageResponse.fromJson(v, itemParser: AdminUser.fromJson),
+  )).data;
+
+  Future<AdminUser> user(int id) async =>
+      (await _api.get(ApiPaths.adminUser(id), parser: AdminUser.fromJson)).data;
+
+  Future<AdminUser> setUserStatus(int id, int status) async => (await _api.put(
+    ApiPaths.adminUserStatus(id),
+    data: {'status': status},
+    parser: AdminUser.fromJson,
+  )).data;
   Future<PageResponse<Book>> books({
+    String? keyword,
     String? status,
     int? authorId,
     int? publisherId,
@@ -26,6 +54,8 @@ class AdminRepository {
   }) async => (await _api.get(
     ApiPaths.adminBooks,
     queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
       if (status != null) 'status': status,
       if (authorId != null) 'authorId': authorId,
       if (publisherId != null) 'publisherId': publisherId,
@@ -124,25 +154,37 @@ class AdminRepository {
 
   Future<void> deletePublisher(int id) => _delete(ApiPaths.adminPublisher(id));
 
-  Future<List<AdminCategory>> categories({int? status}) async =>
-      (await _api.get(
-        ApiPaths.adminCategories,
-        queryParameters: {if (status != null) 'status': status},
-        parser: (v) {
-          if (v is! List) throw const FormatException('分类响应必须是数组');
-          return v.map(AdminCategory.fromJson).toList(growable: false);
-        },
-      )).data;
+  Future<List<AdminCategory>> categories({
+    String? keyword,
+    int? status,
+  }) async => (await _api.get(
+    ApiPaths.adminCategories,
+    queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
+      if (status != null) 'status': status,
+    },
+    parser: (v) {
+      if (v is! List) throw const FormatException('分类响应必须是数组');
+      return v.map(AdminCategory.fromJson).toList(growable: false);
+    },
+  )).data;
 
-  Future<List<AdminCategory>> categoryTree({int? status}) async =>
-      (await _api.get(
-        ApiPaths.adminCategoriesTree,
-        queryParameters: {if (status != null) 'status': status},
-        parser: (v) {
-          if (v is! List) throw const FormatException('分类树响应必须是数组');
-          return v.map(AdminCategory.fromJson).toList(growable: false);
-        },
-      )).data;
+  Future<List<AdminCategory>> categoryTree({
+    String? keyword,
+    int? status,
+  }) async => (await _api.get(
+    ApiPaths.adminCategoriesTree,
+    queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
+      if (status != null) 'status': status,
+    },
+    parser: (v) {
+      if (v is! List) throw const FormatException('分类树响应必须是数组');
+      return v.map(AdminCategory.fromJson).toList(growable: false);
+    },
+  )).data;
 
   Future<void> saveCategory(Map<String, dynamic> data, {int? id}) async {
     if (id == null) {
@@ -186,6 +228,40 @@ class AdminRepository {
     await _api.put(ApiPaths.adminShipOrder(id));
   }
 
+  Future<PageResponse<AdminRefundRequest>> refunds({
+    String? status,
+    String? type,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
+    ApiPaths.adminRefunds,
+    queryParameters: {
+      if (status != null) 'status': status,
+      if (type != null) 'type': type,
+      'page': page,
+      'size': size,
+    },
+    parser: (v) =>
+        PageResponse.fromJson(v, itemParser: AdminRefundRequest.fromJson),
+  )).data;
+
+  Future<AdminRefundRequest> refund(int id) async => (await _api.get(
+    ApiPaths.adminRefund(id),
+    parser: AdminRefundRequest.fromJson,
+  )).data;
+
+  Future<AdminRefundRequest> reviewRefund(
+    int id, {
+    required bool approved,
+    String? remark,
+  }) async => (await _api.put(
+    ApiPaths.adminRefundReview(id),
+    data: {
+      'approved': approved,
+      if (remark != null && remark.trim().isNotEmpty) 'remark': remark.trim(),
+    },
+    parser: AdminRefundRequest.fromJson,
+  )).data;
   Future<PageResponse<UserReview>> reviews({
     int? bookId,
     int? userId,

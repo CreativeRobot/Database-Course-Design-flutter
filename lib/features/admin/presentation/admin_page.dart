@@ -10,6 +10,8 @@ import 'admin_catalog_pages.dart';
 import 'admin_providers.dart';
 import 'admin_orders_reviews_pages.dart';
 import 'admin_overview_page.dart';
+import 'admin_users_page.dart';
+import 'admin_refunds_page.dart';
 
 enum AdminSection {
   overview('overview', '经营概览', Icons.dashboard_outlined),
@@ -19,7 +21,9 @@ enum AdminSection {
   categories('categories', '分类管理', Icons.account_tree_outlined),
   orders('orders', '订单管理', Icons.receipt_long_outlined),
   reviews('reviews', '评价审核', Icons.rate_review_outlined),
-  inventory('inventory', '库存流水', Icons.inventory_2_outlined);
+  inventory('inventory', '库存流水', Icons.inventory_2_outlined),
+  users('users', '用户管理', Icons.people_outline),
+  refunds('refunds', '售后审核', Icons.assignment_return_outlined);
 
   const AdminSection(this.path, this.label, this.icon);
   final String path;
@@ -42,6 +46,8 @@ class AdminPage extends ConsumerWidget {
       AdminSection.orders => const AdminOrdersPage(),
       AdminSection.reviews => const AdminReviewsPage(),
       AdminSection.inventory => const AdminInventoryPage(),
+      AdminSection.users => const AdminUsersPage(),
+      AdminSection.refunds => const AdminRefundsPage(),
     };
     return Scaffold(
       backgroundColor: AdminColors.canvas,
@@ -433,7 +439,11 @@ Future<bool> confirmAdminAction(
     ) ??
     false;
 
-void showAdminMessage(BuildContext context, Object message) {
+void showAdminMessage(
+  BuildContext context,
+  Object message, {
+  Duration? duration,
+}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   messenger
@@ -446,6 +456,7 @@ void showAdminMessage(BuildContext context, Object message) {
               : appErrorMessage(message),
         ),
         behavior: SnackBarBehavior.floating,
+        duration: duration ?? const Duration(seconds: 4),
       ),
     );
 }

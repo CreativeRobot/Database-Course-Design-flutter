@@ -9,6 +9,7 @@ class AdminStatistics {
     required this.salesAmount,
     required this.soldQuantity,
     required this.monthlySales,
+    required this.dailySales,
     required this.topBooks,
     required this.categorySales,
     required this.lowStockBooks,
@@ -21,6 +22,7 @@ class AdminStatistics {
       salesAmount: _double(map['salesAmount']),
       soldQuantity: _int(map['soldQuantity']),
       monthlySales: _list(map['monthlySales'], MonthlySale.fromJson),
+      dailySales: _list(map['dailySales'], DailySale.fromJson),
       topBooks: _list(map['topBooks'], BookSale.fromJson),
       categorySales: _list(map['categorySales'], CategorySale.fromJson),
       lowStockBooks: _list(map['lowStockBooks'], LowStockBook.fromJson),
@@ -31,6 +33,7 @@ class AdminStatistics {
   final double salesAmount;
   final int soldQuantity;
   final List<MonthlySale> monthlySales;
+  final List<DailySale> dailySales;
   final List<BookSale> topBooks;
   final List<CategorySale> categorySales;
   final List<LowStockBook> lowStockBooks;
@@ -49,6 +52,22 @@ class MonthlySale {
   }
   final String month;
   final int orders;
+  final int quantity;
+  final double amount;
+}
+
+class DailySale {
+  const DailySale(this.date, this.quantity, this.amount);
+  factory DailySale.fromJson(dynamic json) {
+    final map = _map(json, '每日销售');
+    return DailySale(
+      map['saleDate'] as String? ?? '',
+      _int(map['soldQuantity']),
+      _double(map['salesAmount']),
+    );
+  }
+
+  final String date;
   final int quantity;
   final double amount;
 }
@@ -249,6 +268,52 @@ class UploadResult {
   final String filename;
 }
 
+class AdminUser {
+  const AdminUser({
+    required this.id,
+    required this.username,
+    required this.nickname,
+    required this.email,
+    required this.phone,
+    required this.avatarUrl,
+    required this.role,
+    required this.status,
+    required this.createTime,
+    required this.updateTime,
+  });
+
+  factory AdminUser.fromJson(dynamic json) {
+    final map = _map(json, '用户');
+    return AdminUser(
+      id: _int(map['id']),
+      username: map['username'] as String? ?? '',
+      nickname: map['nickname'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      phone: map['phone'] as String? ?? '',
+      avatarUrl: map['avatarUrl'] as String? ?? '',
+      role: map['role'] as String? ?? 'CUSTOMER',
+      status: _int(map['status'], fallback: 1),
+      createTime: DateTime.tryParse(map['createTime'] as String? ?? ''),
+      updateTime: DateTime.tryParse(map['updateTime'] as String? ?? ''),
+    );
+  }
+
+  final int id;
+  final String username;
+  final String nickname;
+  final String email;
+  final String phone;
+  final String avatarUrl;
+  final String role;
+  final int status;
+  final DateTime? createTime;
+  final DateTime? updateTime;
+
+  bool get isActive => status == 1;
+  String get statusLabel => isActive ? '正常' : '已停用';
+  String get roleLabel => role == 'ADMIN' ? '管理员' : '普通用户';
+}
+
 typedef AdminBook = Book;
 typedef AdminBookDetail = BookDetail;
 typedef AdminOrder = BookOrder;
@@ -266,3 +331,77 @@ int _int(dynamic value, {int fallback = 0}) =>
 double _double(dynamic value) => (value as num?)?.toDouble() ?? 0;
 List<T> _list<T>(dynamic value, T Function(dynamic) parser) =>
     value is List ? value.map(parser).toList(growable: false) : const [];
+
+class AdminRefundRequest {
+  const AdminRefundRequest({
+    required this.id,
+    required this.refundNo,
+    required this.orderId,
+    required this.orderNo,
+    required this.orderItemId,
+    required this.userId,
+    required this.username,
+    required this.bookId,
+    required this.bookTitle,
+    required this.type,
+    required this.status,
+    required this.quantity,
+    required this.itemQuantity,
+    required this.refundedQuantity,
+    required this.amount,
+    required this.reason,
+    required this.reviewRemark,
+    required this.createTime,
+  });
+  factory AdminRefundRequest.fromJson(dynamic json) {
+    final m = Map<String, dynamic>.from(json as Map);
+    int integer(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+    double decimal(dynamic v) =>
+        v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+    return AdminRefundRequest(
+      id: integer(m['id']),
+      refundNo: m['refundNo'] as String? ?? '',
+      orderId: integer(m['orderId']),
+      orderNo: m['orderNo'] as String? ?? '',
+      orderItemId: integer(m['orderItemId']),
+      userId: integer(m['userId']),
+      username: m['username'] as String? ?? '',
+      bookId: integer(m['bookId']),
+      bookTitle: m['bookTitle'] as String? ?? '',
+      type: m['type'] as String? ?? '',
+      status: m['status'] as String? ?? 'PENDING',
+      quantity: integer(m['quantity']),
+      itemQuantity: integer(m['itemQuantity']),
+      refundedQuantity: integer(m['refundedQuantity']),
+      amount: decimal(m['amount']),
+      reason: m['reason'] as String? ?? '',
+      reviewRemark: m['reviewRemark'] as String? ?? '',
+      createTime: m['createTime'] as String? ?? '',
+    );
+  }
+  final int id,
+      orderId,
+      orderItemId,
+      userId,
+      bookId,
+      quantity,
+      itemQuantity,
+      refundedQuantity;
+  final String refundNo,
+      orderNo,
+      username,
+      bookTitle,
+      type,
+      status,
+      reason,
+      reviewRemark,
+      createTime;
+  final double amount;
+  bool get pending => status == 'PENDING';
+  String get typeLabel => type == 'RETURN_REFUND' ? '退货退款' : '仅退款';
+  String get statusLabel => switch (status) {
+    'APPROVED' => '已同意',
+    'REJECTED' => '已拒绝',
+    _ => '待审核',
+  };
+}

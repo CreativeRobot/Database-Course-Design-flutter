@@ -21,10 +21,29 @@ final adminStatisticsProvider = FutureProvider.autoDispose<AdminStatistics>((
 
 final adminBookFilterProvider = StateProvider<AdminBookFilter?>((ref) => null);
 
+typedef AdminUserFilter = ({
+  String keyword,
+  int? status,
+  String? role,
+  int page,
+});
+
+final adminUsersProvider = FutureProvider.autoDispose
+    .family<PageResponse<AdminUser>, AdminUserFilter>((ref, filter) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .users(
+            keyword: filter.keyword,
+            status: filter.status,
+            role: filter.role,
+            page: filter.page,
+          );
+    });
 final adminBooksProvider = FutureProvider.autoDispose
     .family<
       PageResponse<Book>,
       ({
+        String keyword,
         String? status,
         int? authorId,
         int? publisherId,
@@ -35,6 +54,7 @@ final adminBooksProvider = FutureProvider.autoDispose
       return ref
           .watch(adminRepositoryProvider)
           .books(
+            keyword: key.keyword,
             status: key.status,
             authorId: key.authorId,
             publisherId: key.publisherId,
@@ -64,13 +84,17 @@ final adminPublishersProvider = FutureProvider.autoDispose
     });
 
 final adminCategoriesProvider = FutureProvider.autoDispose
-    .family<List<AdminCategory>, int?>((ref, status) {
-      return ref.watch(adminRepositoryProvider).categories(status: status);
+    .family<List<AdminCategory>, ({String keyword, int? status})>((ref, key) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .categories(keyword: key.keyword, status: key.status);
     });
 
 final adminCategoryTreeProvider = FutureProvider.autoDispose
-    .family<List<AdminCategory>, int?>((ref, status) {
-      return ref.watch(adminRepositoryProvider).categoryTree(status: status);
+    .family<List<AdminCategory>, ({String keyword, int? status})>((ref, key) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .categoryTree(keyword: key.keyword, status: key.status);
     });
 typedef AdminOrderFilter = ({
   String orderNo,
@@ -126,4 +150,12 @@ final adminInventoryProvider = FutureProvider.autoDispose
             endTime: filter.endTime,
             page: filter.page,
           );
+    });
+
+typedef AdminRefundFilter = ({String? status, String? type, int page});
+final adminRefundsProvider = FutureProvider.autoDispose
+    .family<PageResponse<AdminRefundRequest>, AdminRefundFilter>((ref, filter) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .refunds(status: filter.status, type: filter.type, page: filter.page);
     });
