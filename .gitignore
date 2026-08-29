@@ -50,3 +50,5 @@ app.*.map.json
 .localappdata/
 .dart_tool/
 build/
+
+.dart-appdata/

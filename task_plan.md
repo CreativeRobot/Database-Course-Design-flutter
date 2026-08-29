@@ -63,3 +63,9 @@
 - 基线提交包含当前已有业务改动和本轮测试修复；不得包含 `.dart-appdata/`。
 - 退款功能复用后端现有 `/api/orders/{orderId}/refunds`、`/api/orders/refunds` 和详情接口。
 - 新增生产行为必须先有可正确失败的测试。
+- [x] 复现并确认 4 个测试失败的根因
+- [x] 最小化修复测试/实现并跑完整 Flutter 测试
+- [x] 提交基线版本（排除 `.dart-appdata/`）：`5d62c2d feat: refine customer and admin storefront flows`
+- [ ] 创建退款功能分支/隔离工作目录并确认干净基线
+- [ ] TDD 实现普通用户退款/退货退款及售后记录
+- [ ] 完整验证并提交退款功能

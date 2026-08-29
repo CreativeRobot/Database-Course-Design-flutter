@@ -33,3 +33,4 @@
 - 2026-08-29：前三项测试已通过。加入 GoRouter 的 `overridePlatformDefaultLocation: true` 后，widget 登录测试仍失败，说明仅覆盖平台默认 location 不能解决测试中的 Not Found；回退到根因调查，重新以安全的临时文本输出确认当前页面及定位 GoRouter 的实际初始 URI。此修复尚未验证通过，不可提交。
 - 2026-08-29：根路径重定向后 widget 测试仍显示 Page Not Found，表明当前实际路由 URI 既不是可匹配的 `/` 也不是 `/login`。下一步在同一临时诊断测试中读取 ProviderScope 内 GoRouter 的 routeInformation URI 和当前匹配 URI，确认问题是测试绑定的 route information 还是应用的路由表。未再次猜测修改生产代码。
 - 2026-08-29：四项失败已完成修复：前三项为失效测试 API/锚点/文案，第四项为缺失 AppConfig 的测试隔离。`widget_test.dart` 已通过；下一步重新跑四项目标测试与完整套件后提交基线。
+- 2026-08-29：基线提交完成：`5d62c2d feat: refine customer and admin storefront flows`。提交前/后运行 `flutter test --no-pub`，全套 79 项测试通过。`.dart-appdata/` 保持未追踪且未提交。
