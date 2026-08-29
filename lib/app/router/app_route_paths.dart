@@ -6,6 +6,7 @@ abstract final class AppRoutePaths {
   static const cart = '/cart';
   static const checkout = '/checkout';
   static const orders = '/orders';
+  static const refunds = '/refunds';
   static const reviews = '/reviews';
   static const profile = '/profile';
   static const admin = '/admin';
@@ -21,6 +22,7 @@ abstract final class AppRoutePaths {
       location == checkout ||
       location == orders ||
       location.startsWith('$orders/') ||
+      location == refunds ||
       location == reviews ||
       location == profile;
 }

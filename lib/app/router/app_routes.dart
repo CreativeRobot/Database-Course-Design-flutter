@@ -9,6 +9,7 @@ import '../../features/orders/presentation/checkout_page.dart';
 import '../../features/orders/presentation/order_detail_page.dart';
 import '../../features/orders/presentation/orders_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
+import '../../features/refunds/presentation/customer_refunds_page.dart';
 import '../../features/reviews/presentation/reviews_page.dart';
 import 'app_route_paths.dart';
 
@@ -57,6 +58,10 @@ List<GoRoute> _customerRoutes() => [
           ? const OrdersPage()
           : OrderDetailPage(orderId: orderId);
     },
+  ),
+  GoRoute(
+    path: AppRoutePaths.refunds,
+    builder: (_, _) => const CustomerRefundsPage(),
   ),
   GoRoute(path: AppRoutePaths.reviews, builder: (_, _) => const ReviewsPage()),
   GoRoute(path: AppRoutePaths.profile, builder: (_, _) => const ProfilePage()),

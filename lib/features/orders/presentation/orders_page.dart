@@ -69,10 +69,23 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                 eyebrow: 'ORDERS  ·  我的订单',
                 title: '每一本，都有去向',
                 subtitle: '查看订单进度，并处理待支付或可取消的订单。',
-                trailing: OutlinedButton.icon(
-                  onPressed: () => context.go('/books'),
-                  icon: const Icon(Icons.menu_book_outlined, size: 18),
-                  label: const Text('继续选书'),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/refunds'),
+                      icon: const Icon(
+                        Icons.assignment_return_outlined,
+                        size: 18,
+                      ),
+                      label: const Text('我的售后记录'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.go('/books'),
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: const Text('继续选书'),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 28),

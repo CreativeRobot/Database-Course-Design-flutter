@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../reviews/data/review_models.dart';
 import '../../reviews/presentation/reviews_controller.dart';
+import '../../refunds/data/refund_models.dart';
+import '../../refunds/presentation/refunds_providers.dart';
 import '../data/order_models.dart';
 import 'orders_controller.dart';
 
@@ -49,6 +51,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     final order = ref.watch(orderDetailProvider(widget.orderId));
     final reviews = ref.watch(reviewsControllerProvider);
     final orders = ref.watch(ordersControllerProvider);
+    final customerRefunds = ref.watch(customerRefundsProvider);
     return Scaffold(
       backgroundColor: CommerceColors.canvas,
       body: SafeArea(
@@ -77,6 +80,17 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                           child: _DetailContent(
                             order: value,
                             reviews: reviews,
+                            refunds:
+                                customerRefunds.valueOrNull?.records
+                                    .where(
+                                      (refund) =>
+                                          refund.orderId == value.id &&
+                                          refund.isActive,
+                                    )
+                                    .toList(growable: false) ??
+                                const [],
+                            canRequestRefund:
+                                !value.canPay && value.status != 'CANCELLED',
                             actionBusy: orders.busyOrderId == value.id,
                             actionError: orders.errorMessage,
                             onPay: () => _confirmPay(value),
@@ -88,6 +102,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                                 .loadMyReviews(force: true),
                             onReview: (line, existing) =>
                                 _editReview(line, existing),
+                            onRefund: (line) => _requestRefund(value, line),
                           ),
                         ),
                       ),
@@ -232,6 +247,32 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     ).showSnackBar(const SnackBar(content: Text('已确认收货，现在可以评价商品了')));
   }
 
+  Future<void> _requestRefund(BookOrder order, OrderLine line) async {
+    final application = await showDialog<RefundApplication>(
+      context: context,
+      builder: (_) => _RefundApplicationDialog(line: line),
+    );
+    if (application == null || !mounted) return;
+    try {
+      await ref
+          .read(refundRepositoryProvider)
+          .createRefund(order.id, application);
+      ref.invalidate(customerRefundsProvider);
+      ref.invalidate(orderDetailProvider(order.id));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('售后申请已提交，等待审核')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('售后申请提交失败，请稍后重试')));
+      }
+    }
+  }
+
   Future<void> _editReview(OrderLine line, UserReview? existing) async {
     final result = await showDialog<_ReviewDraft>(
       context: context,
@@ -264,6 +305,8 @@ class _DetailContent extends StatelessWidget {
   const _DetailContent({
     required this.order,
     required this.reviews,
+    required this.refunds,
+    required this.canRequestRefund,
     required this.actionBusy,
     required this.actionError,
     required this.onPay,
@@ -272,10 +315,13 @@ class _DetailContent extends StatelessWidget {
     required this.onExpired,
     required this.onReloadReviews,
     required this.onReview,
+    required this.onRefund,
   });
 
   final BookOrder order;
   final ReviewsState reviews;
+  final List<CustomerRefundRequest> refunds;
+  final bool canRequestRefund;
   final bool actionBusy;
   final String? actionError;
   final VoidCallback onPay;
@@ -284,6 +330,7 @@ class _DetailContent extends StatelessWidget {
   final VoidCallback onExpired;
   final VoidCallback onReloadReviews;
   final void Function(OrderLine line, UserReview? existing) onReview;
+  final void Function(OrderLine line) onRefund;
 
   @override
   Widget build(BuildContext context) {
@@ -357,11 +404,17 @@ class _DetailContent extends StatelessWidget {
               for (var index = 0; index < order.items.length; index++) ...[
                 _DetailLine(
                   line: order.items[index],
+                  refund: refunds.cast<CustomerRefundRequest?>().firstWhere(
+                    (refund) => refund?.orderItemId == order.items[index].id,
+                    orElse: () => null,
+                  ),
+                  canRequestRefund: canRequestRefund,
                   review: reviews.reviewFor(order.items[index].id),
                   reviewBusy: reviews.busyOrderItemId == order.items[index].id,
                   canReview:
                       order.status == 'COMPLETED' &&
                       reviews.status == ReviewsStatus.ready,
+                  onRefund: () => onRefund(order.items[index]),
                   onReview: () => onReview(
                     order.items[index],
                     reviews.reviewFor(order.items[index].id),
@@ -480,6 +533,9 @@ class _DetailLine extends StatelessWidget {
   const _DetailLine({
     required this.line,
     required this.review,
+    required this.refund,
+    required this.canRequestRefund,
+    required this.onRefund,
     required this.reviewBusy,
     required this.canReview,
     required this.onReview,
@@ -487,6 +543,9 @@ class _DetailLine extends StatelessWidget {
 
   final OrderLine line;
   final UserReview? review;
+  final CustomerRefundRequest? refund;
+  final bool canRequestRefund;
+  final VoidCallback onRefund;
   final bool reviewBusy;
   final bool canReview;
   final VoidCallback onReview;
@@ -540,6 +599,16 @@ class _DetailLine extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(money(line.subtotal)),
+            if (refund != null) ...[
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => context.push('/refunds'),
+                child: Text('售后：'),
+              ),
+            ] else if (canRequestRefund) ...[
+              const SizedBox(height: 10),
+              OutlinedButton(onPressed: onRefund, child: const Text('申请售后')),
+            ],
             if (canReview) ...[
               const SizedBox(height: 10),
               reviewBusy
@@ -760,3 +829,90 @@ String _statusLabel(String status) => switch (status) {
 String _dateTime(DateTime? value) => value == null
     ? '--'
     : DateFormat('yyyy.MM.dd HH:mm').format(value.toLocal());
+
+class _RefundApplicationDialog extends StatefulWidget {
+  const _RefundApplicationDialog({required this.line});
+  final OrderLine line;
+  @override
+  State<_RefundApplicationDialog> createState() =>
+      _RefundApplicationDialogState();
+}
+
+class _RefundApplicationDialogState extends State<_RefundApplicationDialog> {
+  final _reason = TextEditingController();
+  RefundType _type = RefundType.refundOnly;
+  int _quantity = 1;
+  String? _error;
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('申请售后'),
+    content: SizedBox(
+      width: 360,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<RefundType>(
+            value: _type,
+            decoration: const InputDecoration(labelText: '售后类型'),
+            items: RefundType.values
+                .map(
+                  (type) =>
+                      DropdownMenuItem(value: type, child: Text(type.label)),
+                )
+                .toList(),
+            onChanged: (value) => setState(() => _type = value ?? _type),
+          ),
+          DropdownButtonFormField<int>(
+            value: _quantity,
+            decoration: const InputDecoration(labelText: '数量'),
+            items: List.generate(
+              widget.line.quantity,
+              (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1} 件')),
+            ),
+            onChanged: (value) =>
+                setState(() => _quantity = value ?? _quantity),
+          ),
+          TextField(
+            controller: _reason,
+            maxLength: 200,
+            decoration: const InputDecoration(
+              labelText: '申请原因',
+              hintText: '请填写售后原因',
+            ),
+          ),
+          if (_error != null)
+            Text(_error!, style: const TextStyle(color: CommerceColors.danger)),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('取消'),
+      ),
+      FilledButton(onPressed: _submit, child: const Text('提交申请')),
+    ],
+  );
+  void _submit() {
+    final reason = _reason.text.trim();
+    if (reason.isEmpty) {
+      setState(() => _error = '请填写售后原因');
+      return;
+    }
+    Navigator.pop(
+      context,
+      RefundApplication(
+        orderItemId: widget.line.id,
+        type: _type,
+        quantity: _quantity,
+        reason: reason,
+      ),
+    );
+  }
+}
