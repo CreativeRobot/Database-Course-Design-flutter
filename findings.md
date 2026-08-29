@@ -13,3 +13,23 @@
 - 公共图书搜索已有作者、出版社、分类谓词；分类筛选使用 `resolveSearchCategoryIds`，可复用以满足一级分类包含直属二级分类的规则。
 - Flutter 已使用 Riverpod。最小改动是新增持久的 `AdminBookFilter` 状态，在作者/出版社/分类点击操作时写入状态并切换到 `AdminSection.books`；图书页据此查询并提供清除筛选。
 - 2026-08-26：直接执行 `dart test` 无法使用间接依赖的 `package:test`（项目只声明 `flutter_test`）。不增加依赖；保留 Flutter 标准测试文件，并以无依赖的 Dart 断言脚本验证核心 filter helper 的 RED/GREEN。
+
+- 2026-08-27：分类管理页现支持按分类名称搜索，后端 `CategoryRepository`、`CategoryService`、`AdminCategoryController` 已同步增加 keyword 查询。
+- 2026-08-27：前端 `AdminRepository`/providers/pages 已同步传递分类 keyword；图书管理页新增按书名搜索框。
+- 2026-08-27：地址预填和结算返回刷新实现已落盘，保留原有用户模型及控制器改动。
+
+- 2026-08-29：用户明确顺序为：修复 4 个 Flutter 测试失败 → 提交当前基线（排除 `.dart-appdata/`）→ 开发普通用户退款/退货退款。
+- 当前失败测试文件：`test/admin_error_message_test.dart`、`test/books_admin_navigation_test.dart`、`test/books_home_navigation_test.dart`、`test/widget_test.dart`。开始时工作区已有多项未提交业务改动，不能丢弃。
+- 初步发现：`admin_error_message_test.dart` 调用了已不存在的 `showAdminActionError`；搜索筛选测试仍期待旧文案 `全部分类`；管理导航测试的类结束锚点或文本断言可能滞后；登录 widget 测试需要单独复现并检查认证状态/路由初始化。
+- 2026-08-29：单文件 `flutter test --no-pub test/admin_error_message_test.dart` 无输出悬挂约 120 秒，已中断；这与先前完整测试报告的 4 项普通失败不一致，需先排查进程/锁或 Flutter 前端工具启动状态。
+- 2026-08-29：`flutter --verbose test` 同样在输出测试日志前悬挂，初步定位为 Flutter CLI/SDK 级启动阻塞，非单一测试框架输出。测试行为根因调查先以 `dart analyze` 和源代码进行；运行验证需采取不同于直接 Flutter CLI 的策略。
+- 2026-08-29：绕过 `flutter.bat.lock` 直接调用 Flutter 工具快照时，工具明确报 `bin/cache/lockfile` 无法打开，确认 SDK 全局锁正在被外部进程持有。当前进程清单不含 Dart/Flutter，且无法在非提升权限下查询文件句柄；不终止不明用户进程，改寻找备用 SDK。
+- 2026-08-29：已用受限工作区外 SDK 锁写权限实际复现 4 个失败：
+  1. `admin_error_message_test.dart` 编译失败，调用已删除的 `showAdminActionError`。
+  2. `books_admin_navigation_test.dart` 在查找已不存在的 `class _BookStoreMark` 时得到 `RangeError`；管理员按钮和头像导航文本仍存在。
+  3. `books_home_navigation_test.dart` 仍断言旧文案 `全部分类`，当前分级筛选实现为一级/二级分类。
+  4. `widget_test.dart` 没有找到 `欢迎回来`，尚需检查实际初始路由渲染/认证 Provider 状态，不能仅更新断言。
+- Flutter CLI 初始无法执行是沙箱拒绝写 Flutter SDK 锁文件；使用受控的提升权限测试命令后已正常得到测试输出。
+- 2026-08-29：widget 测试临时输出确认实际渲染为 `Home | Page Not Found`，不是认证持久化或登录文案问题。`BookStoreApp` 的 GoRouter 在测试环境未解析初始路径；下一步读取 `AppRoutePaths` 与现有路由测试，定位 `initialLocation`/路由配置为何落到 Not Found，并以路由级回归测试驱动最小修复。诊断输出将在修复后移除。
+- 2026-08-29：验证显示：`admin_error_message_test.dart`、`books_admin_navigation_test.dart`、`books_home_navigation_test.dart` 已通过；`widget_test.dart` 仍失败。`overridePlatformDefaultLocation: true` 单独不足以让测试环境解析 `/login`，需继续调查 GoRouter 初始 URI/测试绑定。
+- 2026-08-29：最终根因已确认：`widget_test.dart` 的 ProviderScope 未覆盖 `appConfigProvider`，令认证依赖在 GoRouter redirect 中构造时抛出 `API_BASE_URL is required when APP_ENV is development`；GoRouter 将其包装为 redirect 异常，显示 Page Not Found。已撤销未通过的根路由改动，改为在测试中注入 `http://127.0.0.1:1` 的 AppConfig 并清空 SharedPreferences。该单测已实际通过。

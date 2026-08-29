@@ -36,3 +36,30 @@
 | Error | Attempt | Resolution |
 |---|---:|---|
 | Dart analyzer found one required-argument error and two unused locals in `admin_catalog_pages.dart` | 1 | Diagnose the generated generic-list and category-recursion call sites before changing code; runtime filter-helper assertions already pass. |
+
+## 2026-08-27 本轮任务
+- 已完成图书、作者、出版社及分类管理的关键词搜索链路；分类前后端新增 keyword 参数并保留旧服务方法兼容调用。
+- 地址编辑弹窗会优先使用已有地址，收货人和联系电话为空时回填个人资料中的显示名与手机号。
+- 结算页从个人资料返回后等待重新请求地址，并清除已失效的选中地址。
+- Flutter `diff --check` 无新增空白错误；`flutter analyze --no-pub` 在约30秒无输出后中止，未取得分析通过证据。
+- 后端 Maven 编译成功；完整测试执行 43 项，0 failures、3 errors，错误来自既有 Spring 上下文/文件报告权限问题，非本轮编译错误。
+
+---
+## 2026-08-29 测试修复、基线提交与用户退款功能
+
+### Goal
+先修复当前 Flutter 的 4 个失败测试；完整验证后提交现有改动为基线（不包含 `.dart-appdata/`）；随后在独立功能分支实现普通用户的仅退款/退货退款申请与售后记录。
+
+### Phases
+- [ ] 复现并确认 4 个测试失败的根因
+- [ ] 最小化修复测试/实现并跑完整 Flutter 测试
+- [ ] 提交基线版本（排除 `.dart-appdata/`）
+- [ ] 创建退款功能分支/隔离工作目录并确认干净基线
+- [ ] TDD 实现普通用户退款/退货退款及售后记录
+- [ ] 完整验证并提交退款功能
+
+### Constraints
+- 不使用 `git reset --hard`。
+- 基线提交包含当前已有业务改动和本轮测试修复；不得包含 `.dart-appdata/`。
+- 退款功能复用后端现有 `/api/orders/{orderId}/refunds`、`/api/orders/refunds` 和详情接口。
+- 新增生产行为必须先有可正确失败的测试。

@@ -10,10 +10,23 @@ import '../data/order_models.dart';
 import 'orders_controller.dart';
 
 class OrdersPage extends ConsumerStatefulWidget {
-  const OrdersPage({super.key});
+  const OrdersPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<OrdersPage> createState() => _OrdersPageState();
+}
+
+class OrdersContent extends StatelessWidget {
+  const OrdersContent({super.key, this.embedded = false});
+
+  final bool embedded;
+
+  @override
+  Widget build(BuildContext context) {
+    return OrdersPage(embedded: embedded);
+  }
 }
 
 class _OrdersPageState extends ConsumerState<OrdersPage> {
@@ -44,131 +57,123 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(ordersControllerProvider);
     final controller = ref.read(ordersControllerProvider.notifier);
-
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 36, 20, 64),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CommerceTitle(
+                eyebrow: 'ORDERS  ·  我的订单',
+                title: '每一本，都有去向',
+                subtitle: '查看订单进度，并处理待支付或可取消的订单。',
+                trailing: OutlinedButton.icon(
+                  onPressed: () => context.go('/books'),
+                  icon: const Icon(Icons.menu_book_outlined, size: 18),
+                  label: const Text('继续选书'),
+                ),
+              ),
+              const SizedBox(height: 28),
+              _OrderFilters(
+                selected: state.filter,
+                disabled: state.status == OrdersStatus.loading,
+                onSelected: (status) => controller.loadOrders(
+                  status: status,
+                  clearFilter: status == null,
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (state.errorMessage != null) ...[
+                CommerceNotice(message: state.errorMessage!),
+                const SizedBox(height: 18),
+              ],
+              if (state.status == OrdersStatus.loading && state.orders.isEmpty)
+                const CommerceLoadingState(message: '正在加载订单')
+              else if (state.status == OrdersStatus.failure &&
+                  state.orders.isEmpty)
+                CommerceErrorState(
+                  message: state.errorMessage ?? '订单暂时无法加载',
+                  onRetry: () => controller.loadOrders(),
+                )
+              else if (state.orders.isEmpty)
+                CommerceEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  message: state.filter != null ? '这个状态下暂无订单' : '还没有订单',
+                  action: state.filter == null
+                      ? FilledButton(
+                          onPressed: () => context.go('/books'),
+                          child: const Text('去选书'),
+                        )
+                      : null,
+                )
+              else
+                Column(
+                  children: [
+                    for (
+                      var index = 0;
+                      index < state.orders.length;
+                      index++
+                    ) ...[
+                      _OrderCard(
+                        order: state.orders[index],
+                        busy: state.busyOrderId == state.orders[index].id,
+                        onPay: () => _confirmPay(state.orders[index]),
+                        onCancel: () => _confirmCancel(state.orders[index]),
+                        onConfirm: () => _confirmReceipt(state.orders[index]),
+                        onOpen: () =>
+                            context.push('/orders/${state.orders[index].id}'),
+                        onExpired: controller.refreshLoadedOrders,
+                      ),
+                      if (index != state.orders.length - 1)
+                        const SizedBox(height: 14),
+                    ],
+                    if (state.hasMore || state.loadingMore) ...[
+                      const SizedBox(height: 22),
+                      Center(
+                        child: state.loadingMore
+                            ? const SizedBox.square(
+                                dimension: 26,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : OutlinedButton.icon(
+                                onPressed: controller.loadMore,
+                                icon: const Icon(Icons.expand_more_rounded),
+                                label: Text(
+                                  '加载更多（已显示 ${state.orders.length}/${state.total}）',
+                                ),
+                              ),
+                      ),
+                    ],
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final body = widget.embedded
+        ? content
+        : RefreshIndicator(
+            onRefresh: () => controller.loadOrders(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: content,
+            ),
+          );
+    if (widget.embedded) {
+      return body;
+    }
     return Scaffold(
       backgroundColor: CommerceColors.canvas,
       body: SafeArea(
         child: Column(
           children: [
             const CommerceHeader(current: 'orders'),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => controller.loadOrders(),
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 36, 20, 64),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CommerceTitle(
-                            eyebrow: 'ORDERS  ·  我的订单',
-                            title: '每一本，都有去向',
-                            subtitle: '查看订单进度，并处理待支付或可取消的订单。',
-                            trailing: OutlinedButton.icon(
-                              onPressed: () => context.go('/books'),
-                              icon: const Icon(
-                                Icons.menu_book_outlined,
-                                size: 18,
-                              ),
-                              label: const Text('继续选书'),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          _OrderFilters(
-                            selected: state.filter,
-                            disabled: state.status == OrdersStatus.loading,
-                            onSelected: (status) => controller.loadOrders(
-                              status: status,
-                              clearFilter: status == null,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          if (state.errorMessage != null) ...[
-                            CommerceNotice(message: state.errorMessage!),
-                            const SizedBox(height: 18),
-                          ],
-                          if (state.status == OrdersStatus.loading &&
-                              state.orders.isEmpty)
-                            const CommerceLoadingState(message: '正在加载订单')
-                          else if (state.status == OrdersStatus.failure &&
-                              state.orders.isEmpty)
-                            CommerceErrorState(
-                              message: state.errorMessage ?? '订单暂时无法加载',
-                              onRetry: () => controller.loadOrders(),
-                            )
-                          else if (state.orders.isEmpty)
-                            CommerceEmptyState(
-                              icon: Icons.receipt_long_outlined,
-                              message: state.filter != null
-                                  ? '这个状态下暂无订单'
-                                  : '还没有订单',
-                              action: state.filter == null
-                                  ? FilledButton(
-                                      onPressed: () => context.go('/books'),
-                                      child: const Text('去选书'),
-                                    )
-                                  : null,
-                            )
-                          else
-                            Column(
-                              children: [
-                                for (
-                                  var index = 0;
-                                  index < state.orders.length;
-                                  index++
-                                ) ...[
-                                  _OrderCard(
-                                    order: state.orders[index],
-                                    busy:
-                                        state.busyOrderId ==
-                                        state.orders[index].id,
-                                    onPay: () =>
-                                        _confirmPay(state.orders[index]),
-                                    onCancel: () =>
-                                        _confirmCancel(state.orders[index]),
-                                    onConfirm: () =>
-                                        _confirmReceipt(state.orders[index]),
-                                    onOpen: () => context.push(
-                                      '/orders/${state.orders[index].id}',
-                                    ),
-                                    onExpired: controller.refreshLoadedOrders,
-                                  ),
-                                  if (index != state.orders.length - 1)
-                                    const SizedBox(height: 14),
-                                ],
-                                if (state.hasMore || state.loadingMore) ...[
-                                  const SizedBox(height: 22),
-                                  Center(
-                                    child: state.loadingMore
-                                        ? const SizedBox.square(
-                                            dimension: 26,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : OutlinedButton.icon(
-                                            onPressed: controller.loadMore,
-                                            icon: const Icon(
-                                              Icons.expand_more_rounded,
-                                            ),
-                                            label: Text(
-                                              '加载更多（已显示 ${state.orders.length}/${state.total}）',
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            Expanded(child: body),
           ],
         ),
       ),

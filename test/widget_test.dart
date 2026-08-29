@@ -1,13 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_application_bookstore/app/app.dart';
+import 'package:flutter_application_bookstore/core/config/app_config.dart';
+import 'package:flutter_application_bookstore/core/providers.dart';
 
 void main() {
-  testWidgets('BookStore app shows the login page', (tester) async {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('BookStore app starts on the login page', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: BookStoreApp(),
+      ProviderScope(
+        overrides: [
+          appConfigProvider.overrideWithValue(
+            const AppConfig(baseUrl: 'http://127.0.0.1:1'),
+          ),
+        ],
+        child: const BookStoreApp(),
       ),
     );
     await tester.pumpAndSettle();

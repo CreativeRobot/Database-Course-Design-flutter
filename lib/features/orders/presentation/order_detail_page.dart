@@ -147,9 +147,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     }
     await _refreshOrder();
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('模拟支付成功')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('模拟支付成功'),
+        duration: Duration(milliseconds: 1500),
+      ),
+    );
   }
 
   Future<void> _confirmCancel(BookOrder order) async {

@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,9 +12,18 @@ import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../orders/data/order_models.dart';
 import '../../orders/presentation/orders_controller.dart';
+import '../../orders/presentation/orders_page.dart';
 import 'profile_controller.dart';
 
-enum ProfileSection { overview, profile, security }
+String addressFieldValue({String? existing, String? fallback}) {
+  final current = existing?.trim() ?? '';
+  if (current.isNotEmpty) {
+    return current;
+  }
+  return fallback?.trim() ?? '';
+}
+
+enum ProfileSection { overview, orders, security }
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -102,9 +110,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
     if (state.status == ProfileStatus.failure && state.profile == null) {
       return _ProfileFailure(
-        message:
-            state.errorMessage ??
-            '\u7528\u6237\u4e2d\u5fc3\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d',
+        message: state.errorMessage ?? '用户中心暂时无法加载',
         onRetry: () => ref.read(profileControllerProvider.notifier).load(),
       );
     }
@@ -134,23 +140,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               profile: profile,
               avatarUrl: avatarUrl,
               defaultAddress: state.defaultAddress,
-              shippedOrders: shippedOrders,
-              onOpenProfile: () => _selectSection(ProfileSection.profile),
-              onRetryShippedOrders: () => ref.invalidate(shippedOrdersProvider),
-            ),
-            ProfileSection.profile => _ProfileEditor(
-              profile: profile,
-              avatarUrl: avatarUrl,
-              submitting: state.submitting,
-              onSave: _saveProfile,
-              onUploadAvatar: _uploadAvatar,
               addresses: state.addresses,
               busyAddressId: state.busyAddressId,
+              shippedOrders: shippedOrders,
+              submitting: state.submitting,
+              onEditNickname: _saveNickname,
+              onEditEmail: _saveEmail,
+              onEditPhone: _savePhone,
+              onManageAddresses: _manageAddresses,
               onAddAddress: () => _editAddress(),
               onEditAddress: _editAddress,
               onSetDefaultAddress: _setDefaultAddress,
               onDeleteAddress: _deleteAddress,
+              onRetryShippedOrders: () => ref.invalidate(shippedOrdersProvider),
             ),
+            ProfileSection.orders => OrdersContent(embedded: true),
             ProfileSection.security => _SecuritySection(
               submitting: state.submitting,
               onChangePassword: _changePassword,
@@ -165,36 +169,70 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     setState(() => _section = section);
   }
 
-  Future<bool> _saveProfile({
-    required String nickname,
-    required String email,
-    required String phone,
-  }) async {
+  Future<bool> _saveNickname(String nickname) async {
+    final profile = ref.read(profileControllerProvider).profile;
+    if (profile == null) {
+      return false;
+    }
     final success = await ref
         .read(profileControllerProvider.notifier)
-        .updateProfile(nickname: nickname, email: email, phone: phone);
+        .updateProfile(
+          nickname: nickname,
+          email: profile.email,
+          phone: profile.phone,
+        );
     if (success && mounted) {
-      _showSuccess('\u4e2a\u4eba\u8d44\u6599\u5df2\u4fdd\u5b58');
+      _showSuccess('昵称已保存');
     }
     return success;
   }
 
-  Future<void> _uploadAvatar() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-    );
-    final file = result?.files.single;
-    if (file?.bytes == null) {
-      return;
+  Future<bool> _saveEmail(String email) async {
+    final profile = ref.read(profileControllerProvider).profile;
+    if (profile == null) {
+      return false;
     }
-
     final success = await ref
         .read(profileControllerProvider.notifier)
-        .uploadAvatar(bytes: file!.bytes!, filename: file.name);
+        .updateProfile(
+          nickname: profile.nickname,
+          email: email,
+          phone: profile.phone,
+        );
     if (success && mounted) {
-      _showSuccess('头像已更新');
+      _showSuccess('邮箱已保存');
     }
+    return success;
+  }
+
+  Future<bool> _savePhone(String phone) async {
+    final profile = ref.read(profileControllerProvider).profile;
+    if (profile == null) {
+      return false;
+    }
+    final success = await ref
+        .read(profileControllerProvider.notifier)
+        .updateProfile(
+          nickname: profile.nickname,
+          email: profile.email,
+          phone: phone,
+        );
+    if (success && mounted) {
+      _showSuccess('手机号已保存');
+    }
+    return success;
+  }
+
+  Future<void> _manageAddresses() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => _AddressManagementDialog(
+        onAdd: () => _editAddress(),
+        onEdit: _editAddress,
+        onSetDefault: _setDefaultAddress,
+        onDelete: _deleteAddress,
+      ),
+    );
   }
 
   Future<bool> _changePassword({
@@ -210,7 +248,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           confirmPassword: confirmPassword,
         );
     if (success && mounted) {
-      _showSuccess('\u5bc6\u7801\u5df2\u4fee\u6539');
+      _showSuccess('密码已修改');
     }
     return success;
   }
@@ -219,7 +257,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final input = await showDialog<UserAddressInput>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _AddressDialog(address: address),
+      builder: (context) => _AddressDialog(
+        address: address,
+        profile: ref.read(profileControllerProvider).profile,
+      ),
     );
     if (input == null) {
       return;
@@ -228,11 +269,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         .read(profileControllerProvider.notifier)
         .saveAddress(input: input, addressId: address?.id);
     if (success && mounted) {
-      _showSuccess(
-        address == null
-            ? '\u6536\u8d27\u5730\u5740\u5df2\u6dfb\u52a0'
-            : '\u6536\u8d27\u5730\u5740\u5df2\u66f4\u65b0',
-      );
+      _showSuccess(address == null ? '收货地址已添加' : '收货地址已更新');
     }
   }
 
@@ -244,7 +281,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         .read(profileControllerProvider.notifier)
         .setDefaultAddress(address.id);
     if (success && mounted) {
-      _showSuccess('\u9ed8\u8ba4\u6536\u8d27\u5730\u5740\u5df2\u66f4\u65b0');
+      _showSuccess('默认收货地址已更新');
     }
   }
 
@@ -252,18 +289,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('\u5220\u9664\u6536\u8d27\u5730\u5740'),
-        content: Text(
-          '\u786e\u5b9a\u5220\u9664 ${address.receiverName} \u7684\u6536\u8d27\u5730\u5740\u5417\uff1f',
-        ),
+        title: const Text('删除收货地址'),
+        content: Text('确定删除 ${address.receiverName} 的收货地址吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('\u53d6\u6d88'),
+            child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('\u5220\u9664'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -275,7 +310,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         .read(profileControllerProvider.notifier)
         .deleteAddress(address.id);
     if (success && mounted) {
-      _showSuccess('\u6536\u8d27\u5730\u5740\u5df2\u5220\u9664');
+      _showSuccess('收货地址已删除');
     }
   }
 
@@ -367,7 +402,7 @@ class _ProfileSidebar extends StatelessWidget {
             ),
             const SizedBox(height: 32),
           ],
-          const _SidebarLabel('\u6211\u7684\u8d26\u6237'),
+          const _SidebarLabel('我的账户'),
           const SizedBox(height: 8),
           for (final section in ProfileSection.values)
             _SidebarItem(
@@ -380,12 +415,12 @@ class _ProfileSidebar extends StatelessWidget {
           const SizedBox(height: 8),
           _SidebarCommand(
             icon: Icons.arrow_back_rounded,
-            label: '\u8fd4\u56de\u4e66\u5e97',
+            label: '返回书店',
             onPressed: () => context.go('/books'),
           ),
           _SidebarCommand(
             icon: Icons.logout_rounded,
-            label: '\u9000\u51fa\u767b\u5f55',
+            label: '退出登录',
             onPressed: onLogout,
           ),
         ],
@@ -408,22 +443,19 @@ class _MobileHeader extends StatelessWidget {
           const BookstoreBrand(),
           const Spacer(),
           IconButton(
-            tooltip: '\u8fd4\u56de\u4e66\u5e97',
+            tooltip: '返回书店',
             onPressed: () => context.go('/books'),
             icon: const Icon(Icons.storefront_outlined),
           ),
           PopupMenuButton<String>(
-            tooltip: '\u8d26\u6237\u83dc\u5355',
+            tooltip: '账户菜单',
             onSelected: (value) {
               if (value == 'logout') {
                 onLogout();
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'logout',
-                child: Text('\u9000\u51fa\u767b\u5f55'),
-              ),
+              PopupMenuItem(value: 'logout', child: Text('退出登录')),
             ],
           ),
         ],
@@ -568,16 +600,36 @@ class _OverviewSection extends StatelessWidget {
     required this.profile,
     required this.avatarUrl,
     required this.defaultAddress,
+    required this.addresses,
+    required this.busyAddressId,
     required this.shippedOrders,
-    required this.onOpenProfile,
+    required this.submitting,
+    required this.onEditNickname,
+    required this.onEditEmail,
+    required this.onEditPhone,
+    required this.onManageAddresses,
+    required this.onAddAddress,
+    required this.onEditAddress,
+    required this.onSetDefaultAddress,
+    required this.onDeleteAddress,
     required this.onRetryShippedOrders,
   });
 
   final UserProfile profile;
   final String? avatarUrl;
   final UserAddress? defaultAddress;
+  final List<UserAddress> addresses;
+  final int? busyAddressId;
   final AsyncValue<List<BookOrder>> shippedOrders;
-  final VoidCallback onOpenProfile;
+  final bool submitting;
+  final Future<bool> Function(String nickname) onEditNickname;
+  final Future<bool> Function(String email) onEditEmail;
+  final Future<bool> Function(String phone) onEditPhone;
+  final VoidCallback onManageAddresses;
+  final VoidCallback onAddAddress;
+  final ValueChanged<UserAddress> onEditAddress;
+  final ValueChanged<UserAddress> onSetDefaultAddress;
+  final ValueChanged<UserAddress> onDeleteAddress;
   final VoidCallback onRetryShippedOrders;
 
   @override
@@ -586,16 +638,18 @@ class _OverviewSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionHeading(
-          eyebrow: 'OVERVIEW  \u00b7  \u8d26\u6237\u6982\u89c8',
-          title: '\u4e2a\u4eba\u4e2d\u5fc3',
-          subtitle:
-              '\u67e5\u770b\u9ed8\u8ba4\u6536\u8d27\u5730\u5740\u3001\u53d1\u8d27\u8fdb\u5ea6\u548c\u8d26\u6237\u72b6\u6001\u3002',
+          eyebrow: 'OVERVIEW  ·  账户概览',
+          title: '个人中心',
+          subtitle: '查看默认收货地址、发货进度和账户状态。',
         ),
         const SizedBox(height: 34),
         _AccountHero(
           profile: profile,
           avatarUrl: avatarUrl,
-          onEdit: onOpenProfile,
+          submitting: submitting,
+          onEditNickname: onEditNickname,
+          onEditEmail: onEditEmail,
+          onEditPhone: onEditPhone,
         ),
         const SizedBox(height: 22),
         LayoutBuilder(
@@ -609,37 +663,35 @@ class _OverviewSection extends StatelessWidget {
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.location_on_outlined,
-                  label: '\u9ed8\u8ba4\u5730\u5740',
+                  label: '默认地址',
                   value: defaultAddress == null
-                      ? '\u672a\u8bbe\u7f6e'
+                      ? '未设置'
                       : defaultAddress!.receiverName,
-                  detail: defaultAddress == null
-                      ? '\u8bf7\u5728\u4e2a\u4eba\u8d44\u6599\u4e2d\u7ba1\u7406\u5730\u5740'
-                      : '\u4e0b\u5355\u65f6\u4f18\u5148\u4f7f\u7528\u6b64\u5730\u5740',
+                  detail: defaultAddress == null ? '请点击管理地址添加' : '下单时优先使用此地址',
                 ),
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.verified_user_outlined,
-                  label: '\u8d26\u6237\u72b6\u6001',
-                  value: profile.isEnabled ? '\u6b63\u5e38' : '\u505c\u7528',
-                  detail: profile.isAdmin
-                      ? '\u7ba1\u7406\u5458\u8d26\u6237'
-                      : '\u666e\u901a\u7528\u6237',
+                  label: '账户状态',
+                  value: profile.isEnabled ? '正常' : '停用',
+                  detail: profile.isAdmin ? '管理员账户' : '普通用户',
                 ),
                 _MetricTile(
                   width: tileWidth,
                   icon: Icons.calendar_today_outlined,
-                  label: '\u52a0\u5165\u4e66\u5e97',
+                  label: '加入书店',
                   value: _dateOf(profile.createTime),
-                  detail:
-                      '\u9605\u8bfb\u6863\u6848\u6301\u7eed\u8bb0\u5f55\u4e2d',
+                  detail: '阅读档案持续记录中',
                 ),
               ],
             );
           },
         ),
         const SizedBox(height: 22),
-        _DefaultAddressPanel(address: defaultAddress),
+        _DefaultAddressPanel(
+          address: defaultAddress,
+          onManageAddresses: onManageAddresses,
+        ),
         const SizedBox(height: 38),
         _ShippingOrdersPanel(
           orders: shippedOrders,
@@ -650,19 +702,186 @@ class _OverviewSection extends StatelessWidget {
   }
 }
 
-class _AccountHero extends StatelessWidget {
+enum _AccountField { nickname, email, phone }
+
+class _AccountHero extends StatefulWidget {
   const _AccountHero({
     required this.profile,
     required this.avatarUrl,
-    required this.onEdit,
+    required this.submitting,
+    required this.onEditNickname,
+    required this.onEditEmail,
+    required this.onEditPhone,
   });
 
   final UserProfile profile;
   final String? avatarUrl;
-  final VoidCallback onEdit;
+  final bool submitting;
+  final Future<bool> Function(String nickname) onEditNickname;
+  final Future<bool> Function(String email) onEditEmail;
+  final Future<bool> Function(String phone) onEditPhone;
+
+  @override
+  State<_AccountHero> createState() => _AccountHeroState();
+}
+
+class _AccountHeroState extends State<_AccountHero> {
+  late final TextEditingController _nicknameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _phoneController;
+  _AccountField? _editingField;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameController = TextEditingController(text: widget.profile.nickname);
+    _emailController = TextEditingController(text: widget.profile.email);
+    _phoneController = TextEditingController(text: widget.profile.phone);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AccountHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_editingField != _AccountField.nickname &&
+        oldWidget.profile.nickname != widget.profile.nickname) {
+      _nicknameController.text = widget.profile.nickname;
+    }
+    if (_editingField != _AccountField.email &&
+        oldWidget.profile.email != widget.profile.email) {
+      _emailController.text = widget.profile.email;
+    }
+    if (_editingField != _AccountField.phone &&
+        oldWidget.profile.phone != widget.profile.phone) {
+      _phoneController.text = widget.profile.phone;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final field = _editingField;
+    if (field == null) {
+      return;
+    }
+
+    final value = switch (field) {
+      _AccountField.nickname => _nicknameController.text.trim(),
+      _AccountField.email => _emailController.text.trim(),
+      _AccountField.phone => _phoneController.text.trim(),
+    };
+    if (field == _AccountField.nickname && value.length > 30) {
+      _showValidationMessage('昵称不能超过 30 个字符');
+      return;
+    }
+    if (field == _AccountField.email &&
+        (value.isEmpty || !value.contains('@'))) {
+      _showValidationMessage('请输入有效的邮箱地址');
+      return;
+    }
+    if (field == _AccountField.phone && value.isEmpty) {
+      _showValidationMessage('手机号不能为空');
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    final success = switch (field) {
+      _AccountField.nickname => await widget.onEditNickname(value),
+      _AccountField.email => await widget.onEditEmail(value),
+      _AccountField.phone => await widget.onEditPhone(value),
+    };
+    if (success && mounted) {
+      setState(() => _editingField = null);
+    }
+  }
+
+  void _showValidationMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _editableContact({
+    required _AccountField field,
+    required String label,
+    required String value,
+    required String emptyText,
+    required TextEditingController controller,
+    required TextInputType keyboardType,
+  }) {
+    if (_editingField == field) {
+      return SizedBox(
+        width: 260,
+        child: TextField(
+          controller: controller,
+          autofocus: true,
+          enabled: !widget.submitting,
+          keyboardType: keyboardType,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _save(),
+          decoration: InputDecoration(
+            labelText: label,
+            isDense: true,
+            suffixIcon: _saveSuffixIcon('保存$label'),
+          ),
+        ),
+      );
+    }
+
+    final displayText = value.isEmpty ? emptyText : value;
+    final contactText = label == '手机号' ? '$label $displayText' : displayText;
+    return InkWell(
+      onTap: widget.submitting
+          ? null
+          : () => setState(() => _editingField = field),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              contactText,
+              style: const TextStyle(color: ProfileColors.muted, fontSize: 13),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.edit_outlined,
+              size: 14,
+              color: ProfileColors.muted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _saveSuffixIcon(String tooltip) {
+    if (widget.submitting) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: _save,
+      icon: const Icon(Icons.check_rounded),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final editingNickname = _editingField == _AccountField.nickname;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(26),
@@ -677,39 +896,96 @@ class _AccountHero extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _ProfileAvatar(
-            name: profile.displayName,
-            imageUrl: avatarUrl,
+            name: widget.profile.displayName,
+            imageUrl: widget.avatarUrl,
             size: 64,
           ),
           ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 220, maxWidth: 520),
+            constraints: const BoxConstraints(minWidth: 220, maxWidth: 560),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  profile.displayName,
-                  style: const TextStyle(
-                    color: ProfileColors.ink,
-                    fontFamily: 'serif',
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
+                if (editingNickname)
+                  SizedBox(
+                    width: 360,
+                    child: TextField(
+                      controller: _nicknameController,
+                      autofocus: true,
+                      maxLength: 30,
+                      enabled: !widget.submitting,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _save(),
+                      decoration: InputDecoration(
+                        labelText: '昵称',
+                        suffixIcon: _saveSuffixIcon('保存昵称'),
+                      ),
+                    ),
+                  )
+                else
+                  InkWell(
+                    onTap: widget.submitting
+                        ? null
+                        : () => setState(
+                            () => _editingField = _AccountField.nickname,
+                          ),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.profile.displayName,
+                            style: const TextStyle(
+                              color: ProfileColors.ink,
+                              fontFamily: 'serif',
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 17,
+                            color: ProfileColors.muted,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '@${profile.username}  \u00b7  ${profile.email.isEmpty ? '\u672a\u586b\u5199\u90ae\u7bb1' : profile.email}',
-                  style: const TextStyle(
-                    color: ProfileColors.muted,
-                    fontSize: 13,
-                  ),
+                const SizedBox(height: 7),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '@${widget.profile.username}',
+                      style: const TextStyle(
+                        color: ProfileColors.muted,
+                        fontSize: 13,
+                      ),
+                    ),
+                    _editableContact(
+                      field: _AccountField.email,
+                      label: '邮箱',
+                      value: widget.profile.email,
+                      emptyText: '未填写邮箱',
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    _editableContact(
+                      field: _AccountField.phone,
+                      label: '手机号',
+                      value: widget.profile.phone,
+                      emptyText: '手机号 未填写',
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          OutlinedButton.icon(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('\u7f16\u8f91\u8d44\u6599'),
           ),
         ],
       ),
@@ -798,9 +1074,13 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _DefaultAddressPanel extends StatelessWidget {
-  const _DefaultAddressPanel({required this.address});
+  const _DefaultAddressPanel({
+    required this.address,
+    required this.onManageAddresses,
+  });
 
   final UserAddress? address;
+  final VoidCallback onManageAddresses;
 
   @override
   Widget build(BuildContext context) {
@@ -820,13 +1100,13 @@ class _DefaultAddressPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '\u9ed8\u8ba4\u6536\u8d27\u5730\u5740',
+                  '默认收货地址',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   address == null
-                      ? '\u8fd8\u6ca1\u6709\u6536\u8d27\u5730\u5740\uff0c\u4e0b\u5355\u524d\u8bb0\u5f97\u6dfb\u52a0\u3002'
+                      ? '还没有收货地址，下单前记得添加。'
                       : '${address!.receiverName}  ${address!.receiverPhone}\n${address!.fullAddress}',
                   style: const TextStyle(
                     color: ProfileColors.muted,
@@ -837,8 +1117,117 @@ class _DefaultAddressPanel extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: onManageAddresses,
+            icon: const Icon(Icons.settings_outlined, size: 17),
+            label: const Text('管理地址'),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _AddressManagementDialog extends ConsumerWidget {
+  const _AddressManagementDialog({
+    required this.onAdd,
+    required this.onEdit,
+    required this.onSetDefault,
+    required this.onDelete,
+  });
+
+  final VoidCallback onAdd;
+  final ValueChanged<UserAddress> onEdit;
+  final ValueChanged<UserAddress> onSetDefault;
+  final ValueChanged<UserAddress> onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(profileControllerProvider);
+    final addresses = state.addresses;
+    final busy = state.busyAddressId;
+
+    return AlertDialog(
+      title: const Text('管理收货地址'),
+      content: SizedBox(
+        width: 520,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 420),
+          child: addresses.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Text('暂无收货地址，请先添加一个。'),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: addresses.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final address = addresses[index];
+                    final disabled = busy != null;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        address.defaultAddress
+                            ? Icons.check_circle
+                            : Icons.location_on_outlined,
+                        color: address.defaultAddress
+                            ? ProfileColors.ink
+                            : ProfileColors.muted,
+                      ),
+                      title: Text(
+                        '${address.receiverName}  ${address.receiverPhone}',
+                      ),
+                      subtitle: Text(
+                        address.fullAddress,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        enabled: !disabled,
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'default':
+                              onSetDefault(address);
+                              break;
+                            case 'edit':
+                              onEdit(address);
+                              break;
+                            case 'delete':
+                              onDelete(address);
+                              break;
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          if (!address.defaultAddress)
+                            const PopupMenuItem(
+                              value: 'default',
+                              child: Text('设为默认'),
+                            ),
+                          const PopupMenuItem(value: 'edit', child: Text('编辑')),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('删除'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+      actions: [
+        OutlinedButton.icon(
+          onPressed: busy == null ? onAdd : null,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('新增地址'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('关闭'),
+        ),
+      ],
     );
   }
 }
@@ -872,20 +1261,20 @@ class _ShippingOrdersPanel extends StatelessWidget {
                 Icon(Icons.local_shipping_outlined, size: 21),
                 SizedBox(width: 10),
                 Text(
-                  '\u6b63\u5728\u53d1\u8d27',
+                  '正在发货',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             const Text(
-              '\u5df2\u51fa\u5e93\u7684\u56fe\u4e66\u4f1a\u5728\u8fd9\u91cc\u663e\u793a\u3002',
+              '已出库的图书会在这里显示。',
               style: TextStyle(color: ProfileColors.muted, fontSize: 13),
             ),
             const SizedBox(height: 18),
             if (shippedItems.isEmpty)
               const Text(
-                '\u5f53\u524d\u6ca1\u6709\u6b63\u5728\u53d1\u8d27\u7684\u56fe\u4e66\u3002',
+                '当前没有正在发货的图书。',
                 style: TextStyle(color: ProfileColors.muted),
               )
             else
@@ -918,7 +1307,7 @@ class _ShippingOrdersPanel extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '\u8ba2\u5355 ${entry.order.orderNo}  \u00b7  \u6570\u91cf x${entry.item.quantity}',
+                                  '订单 ${entry.order.orderNo}  ·  数量 x${entry.item.quantity}',
                                   style: const TextStyle(
                                     color: ProfileColors.muted,
                                     fontSize: 12,
@@ -953,500 +1342,19 @@ class _ShippingOrdersPanel extends StatelessWidget {
         children: [
           const Expanded(
             child: Text(
-              '\u6b63\u5728\u53d1\u8d27\u7684\u56fe\u4e66\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d\u3002',
+              '正在发货的图书暂时无法加载。',
               style: TextStyle(color: ProfileColors.muted),
             ),
           ),
           OutlinedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('\u91cd\u8bd5'),
+            label: const Text('重试'),
           ),
         ],
       ),
     ),
   );
-}
-
-class _ProfileEditor extends StatefulWidget {
-  const _ProfileEditor({
-    required this.profile,
-    required this.avatarUrl,
-    required this.submitting,
-    required this.onSave,
-    required this.onUploadAvatar,
-    required this.addresses,
-    required this.busyAddressId,
-    required this.onAddAddress,
-    required this.onEditAddress,
-    required this.onSetDefaultAddress,
-    required this.onDeleteAddress,
-  });
-
-  final UserProfile profile;
-  final String? avatarUrl;
-  final bool submitting;
-  final Future<bool> Function({
-    required String nickname,
-    required String email,
-    required String phone,
-  })
-  onSave;
-  final Future<void> Function() onUploadAvatar;
-  final List<UserAddress> addresses;
-  final int? busyAddressId;
-  final VoidCallback onAddAddress;
-  final ValueChanged<UserAddress> onEditAddress;
-  final ValueChanged<UserAddress> onSetDefaultAddress;
-  final ValueChanged<UserAddress> onDeleteAddress;
-
-  @override
-  State<_ProfileEditor> createState() => _ProfileEditorState();
-}
-
-class _ProfileEditorState extends State<_ProfileEditor> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nicknameController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _phoneController;
-
-  @override
-  void initState() {
-    super.initState();
-    _nicknameController = TextEditingController(text: widget.profile.nickname);
-    _emailController = TextEditingController(text: widget.profile.email);
-    _phoneController = TextEditingController(text: widget.profile.phone);
-  }
-
-  @override
-  void didUpdateWidget(covariant _ProfileEditor oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.profile, widget.profile)) {
-      _nicknameController.text = widget.profile.nickname;
-      _emailController.text = widget.profile.email;
-      _phoneController.text = widget.profile.phone;
-    }
-  }
-
-  @override
-  void dispose() {
-    _nicknameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    FocusManager.instance.primaryFocus?.unfocus();
-    await widget.onSave(
-      nickname: _nicknameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeading(
-          eyebrow: 'PROFILE  \u00b7  \u4e2a\u4eba\u8d44\u6599',
-          title: '\u7f16\u8f91\u8d44\u6599',
-          subtitle:
-              '\u5b8c\u5584\u8054\u7cfb\u65b9\u5f0f\uff0c\u8ba9\u8ba2\u5355\u4e0e\u6536\u8d27\u4fe1\u606f\u66f4\u6e05\u6670\u3002',
-        ),
-        const SizedBox(height: 34),
-        _FormSurface(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: 104,
-                    height: 104,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        _ProfileAvatar(
-                          name: widget.profile.displayName,
-                          imageUrl: widget.avatarUrl,
-                          size: 96,
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Tooltip(
-                            message: '上传头像',
-                            child: Material(
-                              color: ProfileColors.ink,
-                              shape: const CircleBorder(),
-                              child: IconButton(
-                                onPressed: widget.submitting
-                                    ? null
-                                    : widget.onUploadAvatar,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 36,
-                                  height: 36,
-                                ),
-                                iconSize: 18,
-                                color: Colors.white,
-                                disabledColor: ProfileColors.placeholder,
-                                icon: const Icon(Icons.photo_camera_outlined),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                _ReadOnlyField(
-                  label: '\u7528\u6237\u540d',
-                  value: widget.profile.username,
-                  icon: Icons.alternate_email_rounded,
-                ),
-                const SizedBox(height: 20),
-                _ProfileTextField(
-                  controller: _nicknameController,
-                  label: '\u6635\u79f0',
-                  hintText:
-                      '\u8f93\u5165\u4f60\u5e0c\u671b\u5c55\u793a\u7684\u540d\u5b57',
-                  icon: Icons.badge_outlined,
-                  validator: (value) {
-                    if ((value ?? '').trim().length > 30) {
-                      return '\u6635\u79f0\u4e0d\u80fd\u8d85\u8fc7 30 \u4e2a\u5b57\u7b26';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                _ProfileTextField(
-                  controller: _emailController,
-                  label: '\u90ae\u7bb1',
-                  hintText: 'name@example.com',
-                  icon: Icons.mail_outline_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    final text = (value ?? '').trim();
-                    if (text.isNotEmpty &&
-                        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(text)) {
-                      return '\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u90ae\u7bb1\u5730\u5740';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                _ProfileTextField(
-                  controller: _phoneController,
-                  label: '\u624b\u673a\u53f7',
-                  hintText: '\u8f93\u5165 11 \u4f4d\u624b\u673a\u53f7',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    final text = (value ?? '').trim();
-                    if (text.isNotEmpty &&
-                        !RegExp(r'^1[3-9]\d{9}$').hasMatch(text)) {
-                      return '\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u624b\u673a\u53f7';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 28),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.icon(
-                    onPressed: widget.submitting ? null : _submit,
-                    icon: widget.submitting
-                        ? const SizedBox(
-                            width: 17,
-                            height: 17,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.save_outlined, size: 18),
-                    label: Text(
-                      widget.submitting
-                          ? '\u6b63\u5728\u4fdd\u5b58'
-                          : '\u4fdd\u5b58\u8d44\u6599',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 52),
-        _AddressSection(
-          addresses: widget.addresses,
-          busyAddressId: widget.busyAddressId,
-          onAdd: widget.onAddAddress,
-          onEdit: widget.onEditAddress,
-          onSetDefault: widget.onSetDefaultAddress,
-          onDelete: widget.onDeleteAddress,
-        ),
-      ],
-    );
-  }
-}
-
-class _AddressSection extends StatelessWidget {
-  const _AddressSection({
-    required this.addresses,
-    required this.busyAddressId,
-    required this.onAdd,
-    required this.onEdit,
-    required this.onSetDefault,
-    required this.onDelete,
-  });
-
-  final List<UserAddress> addresses;
-  final int? busyAddressId;
-  final VoidCallback onAdd;
-  final ValueChanged<UserAddress> onEdit;
-  final ValueChanged<UserAddress> onSetDefault;
-  final ValueChanged<UserAddress> onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeading(
-          eyebrow: 'ADDRESS  \u00b7  \u6536\u8d27\u5730\u5740',
-          title: '\u6536\u8d27\u5730\u5740',
-          subtitle:
-              '\u7ba1\u7406\u5e38\u7528\u6536\u8d27\u4fe1\u606f\uff0c\u9ed8\u8ba4\u5730\u5740\u4f1a\u5728\u4e0b\u5355\u65f6\u4f18\u5148\u663e\u793a\u3002',
-          action: FilledButton.icon(
-            onPressed: busyAddressId == null ? onAdd : null,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('\u65b0\u589e\u5730\u5740'),
-          ),
-        ),
-        const SizedBox(height: 34),
-        if (addresses.isEmpty)
-          _AddressEmpty(onAdd: onAdd)
-        else
-          ...addresses.map(
-            (address) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _AddressCard(
-                address: address,
-                busy: busyAddressId == address.id,
-                disabled: busyAddressId != null,
-                onEdit: () => onEdit(address),
-                onSetDefault: () => onSetDefault(address),
-                onDelete: () => onDelete(address),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _AddressCard extends StatelessWidget {
-  const _AddressCard({
-    required this.address,
-    required this.busy,
-    required this.disabled,
-    required this.onEdit,
-    required this.onSetDefault,
-    required this.onDelete,
-  });
-
-  final UserAddress address;
-  final bool busy;
-  final bool disabled;
-  final VoidCallback onEdit;
-  final VoidCallback onSetDefault;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(22, 20, 14, 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: address.defaultAddress
-              ? ProfileColors.ink
-              : ProfileColors.line,
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: busy
-          ? const SizedBox(
-              height: 84,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: ProfileColors.sand,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.location_on_outlined, size: 21),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            address.receiverName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            address.receiverPhone,
-                            style: const TextStyle(
-                              color: ProfileColors.muted,
-                              fontSize: 13,
-                            ),
-                          ),
-                          if (address.defaultAddress)
-                            const _StatusTag(label: '\u9ed8\u8ba4\u5730\u5740'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        address.fullAddress,
-                        style: const TextStyle(
-                          color: ProfileColors.muted,
-                          fontSize: 14,
-                          height: 1.55,
-                        ),
-                      ),
-                      if (address.postalCode.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '\u90ae\u653f\u7f16\u7801 ${address.postalCode}',
-                          style: const TextStyle(
-                            color: ProfileColors.placeholder,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  enabled: !disabled,
-                  tooltip: '\u5730\u5740\u64cd\u4f5c',
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'default':
-                        onSetDefault();
-                        break;
-                      case 'edit':
-                        onEdit();
-                        break;
-                      case 'delete':
-                        onDelete();
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (!address.defaultAddress)
-                      const PopupMenuItem(
-                        value: 'default',
-                        child: ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.check_circle_outline, size: 19),
-                          title: Text('\u8bbe\u4e3a\u9ed8\u8ba4'),
-                        ),
-                      ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.edit_outlined, size: 19),
-                        title: Text('\u7f16\u8f91'),
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.delete_outline, size: 19),
-                        title: Text('\u5220\u9664'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-    );
-  }
-}
-
-class _AddressEmpty extends StatelessWidget {
-  const _AddressEmpty({required this.onAdd});
-
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
-      decoration: BoxDecoration(
-        border: Border.all(color: ProfileColors.line),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.add_location_alt_outlined,
-            size: 38,
-            color: ProfileColors.muted,
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            '\u8fd8\u6ca1\u6709\u6536\u8d27\u5730\u5740',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 7),
-          const Text(
-            '\u6dfb\u52a0\u7b2c\u4e00\u4e2a\u5730\u5740\u540e\uff0c\u5b83\u4f1a\u81ea\u52a8\u6210\u4e3a\u9ed8\u8ba4\u5730\u5740\u3002',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: ProfileColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('\u6dfb\u52a0\u5730\u5740'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SecuritySection extends StatefulWidget {
@@ -1507,10 +1415,9 @@ class _SecuritySectionState extends State<_SecuritySection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionHeading(
-          eyebrow: 'SECURITY  \u00b7  \u8d26\u6237\u5b89\u5168',
-          title: '\u4fee\u6539\u5bc6\u7801',
-          subtitle:
-              '\u5b9a\u671f\u66f4\u6362\u5bc6\u7801\uff0c\u4fdd\u6301\u8d26\u6237\u548c\u8ba2\u5355\u4fe1\u606f\u5b89\u5168\u3002',
+          eyebrow: 'SECURITY  ·  账户安全',
+          title: '修改密码',
+          subtitle: '定期更换密码，保持账户和订单信息安全。',
         ),
         const SizedBox(height: 34),
         _FormSurface(
@@ -1521,35 +1428,33 @@ class _SecuritySectionState extends State<_SecuritySection> {
               children: [
                 _PasswordField(
                   controller: _oldPasswordController,
-                  label: '\u5f53\u524d\u5bc6\u7801',
+                  label: '当前密码',
                   visible: _showOldPassword,
                   onToggle: () =>
                       setState(() => _showOldPassword = !_showOldPassword),
-                  validator: (value) => (value ?? '').isEmpty
-                      ? '\u8bf7\u8f93\u5165\u5f53\u524d\u5bc6\u7801'
-                      : null,
+                  validator: (value) =>
+                      (value ?? '').isEmpty ? '请输入当前密码' : null,
                 ),
                 const SizedBox(height: 20),
                 _PasswordField(
                   controller: _newPasswordController,
-                  label: '\u65b0\u5bc6\u7801',
+                  label: '新密码',
                   visible: _showNewPassword,
                   onToggle: () =>
                       setState(() => _showNewPassword = !_showNewPassword),
-                  validator: (value) => (value ?? '').length < 6
-                      ? '\u65b0\u5bc6\u7801\u81f3\u5c11\u9700\u8981 6 \u4e2a\u5b57\u7b26'
-                      : null,
+                  validator: (value) =>
+                      (value ?? '').length < 6 ? '新密码至少需要 6 个字符' : null,
                 ),
                 const SizedBox(height: 20),
                 _PasswordField(
                   controller: _confirmPasswordController,
-                  label: '\u786e\u8ba4\u65b0\u5bc6\u7801',
+                  label: '确认新密码',
                   visible: _showConfirmPassword,
                   onToggle: () => setState(
                     () => _showConfirmPassword = !_showConfirmPassword,
                   ),
                   validator: (value) => value != _newPasswordController.text
-                      ? '\u4e24\u6b21\u8f93\u5165\u7684\u65b0\u5bc6\u7801\u4e0d\u4e00\u81f4'
+                      ? '两次输入的新密码不一致'
                       : null,
                 ),
                 const SizedBox(height: 18),
@@ -1569,11 +1474,7 @@ class _SecuritySectionState extends State<_SecuritySection> {
                             ),
                           )
                         : const Icon(Icons.lock_reset_rounded, size: 19),
-                    label: Text(
-                      widget.submitting
-                          ? '\u6b63\u5728\u63d0\u4ea4'
-                          : '\u66f4\u65b0\u5bc6\u7801',
-                    ),
+                    label: Text(widget.submitting ? '正在提交' : '更新密码'),
                   ),
                 ),
               ],
@@ -1603,7 +1504,7 @@ class _SecurityNotice extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              '\u65b0\u5bc6\u7801\u5efa\u8bae\u540c\u65f6\u5305\u542b\u5b57\u6bcd\u3001\u6570\u5b57\u548c\u7b26\u53f7\uff0c\u4e0d\u8981\u4e0e\u5176\u4ed6\u7f51\u7ad9\u5171\u7528\u3002',
+              '新密码建议同时包含字母、数字和符号，不要与其他网站共用。',
               style: TextStyle(
                 color: ProfileColors.muted,
                 fontSize: 12,
@@ -1618,9 +1519,10 @@ class _SecurityNotice extends StatelessWidget {
 }
 
 class _AddressDialog extends StatefulWidget {
-  const _AddressDialog({this.address});
+  const _AddressDialog({this.address, this.profile});
 
   final UserAddress? address;
+  final UserProfile? profile;
 
   @override
   State<_AddressDialog> createState() => _AddressDialogState();
@@ -1641,18 +1543,33 @@ class _AddressDialogState extends State<_AddressDialog> {
   void initState() {
     super.initState();
     final address = widget.address;
-    _nameController = TextEditingController(text: address?.receiverName ?? '');
-    _phoneController = TextEditingController(
-      text: address?.receiverPhone ?? '',
+    final profile = widget.profile;
+    _nameController = TextEditingController(
+      text: addressFieldValue(
+        existing: address?.receiverName,
+        fallback: profile?.displayName,
+      ),
     );
-    _provinceController = TextEditingController(text: address?.province ?? '');
-    _cityController = TextEditingController(text: address?.city ?? '');
-    _districtController = TextEditingController(text: address?.district ?? '');
+    _phoneController = TextEditingController(
+      text: addressFieldValue(
+        existing: address?.receiverPhone,
+        fallback: profile?.phone,
+      ),
+    );
+    _provinceController = TextEditingController(
+      text: addressFieldValue(existing: address?.province),
+    );
+    _cityController = TextEditingController(
+      text: addressFieldValue(existing: address?.city),
+    );
+    _districtController = TextEditingController(
+      text: addressFieldValue(existing: address?.district),
+    );
     _detailController = TextEditingController(
-      text: address?.detailAddress ?? '',
+      text: addressFieldValue(existing: address?.detailAddress),
     );
     _postalCodeController = TextEditingController(
-      text: address?.postalCode ?? '',
+      text: addressFieldValue(existing: address?.postalCode),
     );
     _defaultAddress = address?.defaultAddress ?? false;
   }
@@ -1710,9 +1627,7 @@ class _AddressDialogState extends State<_AddressDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.address == null
-                                ? '\u65b0\u589e\u6536\u8d27\u5730\u5740'
-                                : '\u7f16\u8f91\u6536\u8d27\u5730\u5740',
+                            widget.address == null ? '新增收货地址' : '编辑收货地址',
                             style: const TextStyle(
                               fontFamily: 'serif',
                               fontSize: 25,
@@ -1721,7 +1636,7 @@ class _AddressDialogState extends State<_AddressDialog> {
                           ),
                           const SizedBox(height: 5),
                           const Text(
-                            '\u8bf7\u586b\u5199\u5b8c\u6574\u4fe1\u606f\uff0c\u7f16\u8f91\u65f6\u5c06\u6574\u4f53\u66f4\u65b0\u5730\u5740\u3002',
+                            '请填写完整信息，编辑时将整体更新地址。',
                             style: TextStyle(
                               color: ProfileColors.muted,
                               fontSize: 12,
@@ -1731,7 +1646,7 @@ class _AddressDialogState extends State<_AddressDialog> {
                       ),
                     ),
                     IconButton(
-                      tooltip: '\u5173\u95ed',
+                      tooltip: '关闭',
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded),
                     ),
@@ -1744,49 +1659,43 @@ class _AddressDialogState extends State<_AddressDialog> {
                     final fields = [
                       _ProfileTextField(
                         controller: _nameController,
-                        label: '\u6536\u8d27\u4eba',
-                        hintText: '\u8f93\u5165\u6536\u8d27\u4eba\u59d3\u540d',
+                        label: '收货人',
+                        hintText: '输入收货人姓名',
                         icon: Icons.person_outline,
-                        validator: _required(
-                          '\u8bf7\u8f93\u5165\u6536\u8d27\u4eba',
-                        ),
+                        validator: _required('请输入收货人'),
                       ),
                       _ProfileTextField(
                         controller: _phoneController,
-                        label: '\u8054\u7cfb\u7535\u8bdd',
-                        hintText: '\u8f93\u5165\u6536\u8d27\u7535\u8bdd',
+                        label: '联系电话',
+                        hintText: '输入收货电话',
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
-                        validator: _required(
-                          '\u8bf7\u8f93\u5165\u8054\u7cfb\u7535\u8bdd',
-                        ),
+                        validator: _required('请输入联系电话'),
                       ),
                       _ProfileTextField(
                         controller: _provinceController,
-                        label: '\u7701\u4efd',
-                        hintText: '\u4f8b\u5982\uff1a\u5e7f\u4e1c\u7701',
+                        label: '省份',
+                        hintText: '例如：广东省',
                         icon: Icons.map_outlined,
-                        validator: _required('\u8bf7\u8f93\u5165\u7701\u4efd'),
+                        validator: _required('请输入省份'),
                       ),
                       _ProfileTextField(
                         controller: _cityController,
-                        label: '\u57ce\u5e02',
-                        hintText: '\u4f8b\u5982\uff1a\u6df1\u5733\u5e02',
+                        label: '城市',
+                        hintText: '例如：深圳市',
                         icon: Icons.location_city_outlined,
-                        validator: _required('\u8bf7\u8f93\u5165\u57ce\u5e02'),
+                        validator: _required('请输入城市'),
                       ),
                       _ProfileTextField(
                         controller: _districtController,
-                        label: '\u533a / \u53bf',
-                        hintText:
-                            '\u4f8b\u5982\uff1a\u5357\u5c71\u533a\uff08\u53ef\u9009\uff09',
+                        label: '区 / 县',
+                        hintText: '例如：南山区（可选）',
                         icon: Icons.place_outlined,
                       ),
                       _ProfileTextField(
                         controller: _postalCodeController,
-                        label: '\u90ae\u653f\u7f16\u7801',
-                        hintText:
-                            '\u4f8b\u5982\uff1a518000\uff08\u53ef\u9009\uff09',
+                        label: '邮政编码',
+                        hintText: '例如：518000（可选）',
                         icon: Icons.markunread_mailbox_outlined,
                         keyboardType: TextInputType.number,
                       ),
@@ -1822,14 +1731,11 @@ class _AddressDialogState extends State<_AddressDialog> {
                 const SizedBox(height: 16),
                 _ProfileTextField(
                   controller: _detailController,
-                  label: '\u8be6\u7ec6\u5730\u5740',
-                  hintText:
-                      '\u8857\u9053\u3001\u697c\u680b\u3001\u95e8\u724c\u53f7',
+                  label: '详细地址',
+                  hintText: '街道、楼栋、门牌号',
                   icon: Icons.home_outlined,
                   maxLines: 2,
-                  validator: _required(
-                    '\u8bf7\u8f93\u5165\u8be6\u7ec6\u5730\u5740',
-                  ),
+                  validator: _required('请输入详细地址'),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile.adaptive(
@@ -1839,11 +1745,11 @@ class _AddressDialogState extends State<_AddressDialog> {
                     setState(() => _defaultAddress = value);
                   },
                   title: const Text(
-                    '\u8bbe\u4e3a\u9ed8\u8ba4\u6536\u8d27\u5730\u5740',
+                    '设为默认收货地址',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
                   subtitle: const Text(
-                    '\u4e0b\u5355\u65f6\u4f18\u5148\u9009\u4e2d\u8fd9\u4e2a\u5730\u5740',
+                    '下单时优先选中这个地址',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -1853,13 +1759,13 @@ class _AddressDialogState extends State<_AddressDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('\u53d6\u6d88'),
+                      child: const Text('取消'),
                     ),
                     const SizedBox(width: 10),
                     FilledButton.icon(
                       onPressed: _submit,
                       icon: const Icon(Icons.save_outlined, size: 18),
-                      label: const Text('\u4fdd\u5b58\u5730\u5740'),
+                      label: const Text('保存地址'),
                     ),
                   ],
                 ),
@@ -1881,13 +1787,11 @@ class _SectionHeading extends StatelessWidget {
     required this.eyebrow,
     required this.title,
     required this.subtitle,
-    this.action,
   });
 
   final String eyebrow;
   final String title;
   final String subtitle;
-  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -1925,23 +1829,7 @@ class _SectionHeading extends StatelessWidget {
         ),
       ],
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (action != null && constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [text, const SizedBox(height: 18), action!],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: text),
-            if (action != null) ...[const SizedBox(width: 18), action!],
-          ],
-        );
-      },
-    );
+    return text;
   }
 }
 
@@ -2023,53 +1911,6 @@ class _ProfileTextField extends StatelessWidget {
   }
 }
 
-class _ReadOnlyField extends StatelessWidget {
-  const _ReadOnlyField({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-          decoration: BoxDecoration(
-            color: ProfileColors.sand,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: ProfileColors.muted),
-              const SizedBox(width: 12),
-              Expanded(child: Text(value)),
-              const Text(
-                '\u4e0d\u53ef\u4fee\u6539',
-                style: TextStyle(
-                  color: ProfileColors.placeholder,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PasswordField extends StatelessWidget {
   const _PasswordField({
     required this.controller,
@@ -2100,12 +1941,10 @@ class _PasswordField extends StatelessWidget {
           obscureText: !visible,
           validator: validator,
           decoration: InputDecoration(
-            hintText: '\u8bf7\u8f93\u5165$label',
+            hintText: '请输入$label',
             prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
             suffixIcon: IconButton(
-              tooltip: visible
-                  ? '\u9690\u85cf\u5bc6\u7801'
-                  : '\u663e\u793a\u5bc6\u7801',
+              tooltip: visible ? '隐藏密码' : '显示密码',
               onPressed: onToggle,
               icon: Icon(
                 visible
@@ -2130,31 +1969,6 @@ class _PasswordField extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StatusTag extends StatelessWidget {
-  const _StatusTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: ProfileColors.ink,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }
@@ -2208,7 +2022,7 @@ class _AvatarInitials extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Text(
-        text.isEmpty ? '\u8bfb' : text.substring(0, 1),
+        text.isEmpty ? '读' : text.substring(0, 1),
         style: TextStyle(
           color: ProfileColors.ink,
           fontFamily: 'serif',
@@ -2231,10 +2045,7 @@ class _ProfileLoading extends StatelessWidget {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text(
-            '\u6b63\u5728\u6574\u7406\u4f60\u7684\u8d26\u6237\u8d44\u6599',
-            style: TextStyle(color: ProfileColors.muted),
-          ),
+          Text('正在整理你的账户资料', style: TextStyle(color: ProfileColors.muted)),
         ],
       ),
     );
@@ -2262,7 +2073,7 @@ class _ProfileFailure extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('\u91cd\u65b0\u52a0\u8f7d'),
+              label: const Text('重新加载'),
             ),
           ],
         ),
@@ -2273,16 +2084,16 @@ class _ProfileFailure extends StatelessWidget {
 
 String _sectionLabel(ProfileSection section) {
   return switch (section) {
-    ProfileSection.overview => '\u8d26\u6237\u6982\u89c8',
-    ProfileSection.profile => '\u4e2a\u4eba\u8d44\u6599',
-    ProfileSection.security => '\u8d26\u6237\u5b89\u5168',
+    ProfileSection.overview => '账户概览',
+    ProfileSection.orders => '我的订单',
+    ProfileSection.security => '账户安全',
   };
 }
 
 IconData _sectionIcon(ProfileSection section) {
   return switch (section) {
     ProfileSection.overview => Icons.dashboard_outlined,
-    ProfileSection.profile => Icons.person_outline_rounded,
+    ProfileSection.orders => Icons.receipt_long_outlined,
     ProfileSection.security => Icons.lock_outline_rounded,
   };
 }

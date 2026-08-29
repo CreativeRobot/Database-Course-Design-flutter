@@ -21,7 +21,7 @@ void main() {
       expect(source, contains("label: const Text('管理台')"));
       final header = source.substring(
         source.indexOf('class _BooksHeader'),
-        source.indexOf('class _BookStoreMark'),
+        source.indexOf('class _HeaderSearch'),
       );
       expect(header, contains('onTap: onProfile'));
       expect(header, isNot(contains('PopupMenuButton<String>')));

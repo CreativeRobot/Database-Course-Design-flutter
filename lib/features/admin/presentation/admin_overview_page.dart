@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -67,6 +69,8 @@ class AdminOverviewPage extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             _SalesChart(stats.monthlySales),
+            const SizedBox(height: 18),
+            _DailySalesTrendChart(stats.dailySales),
             const SizedBox(height: 18),
             LayoutBuilder(
               builder: (_, constraints) {
@@ -246,6 +250,219 @@ class _SalesChart extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DailySalesTrendChart extends StatelessWidget {
+  const _DailySalesTrendChart(this.items);
+
+  final List<DailySale> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxQuantity = items.fold<int>(
+      0,
+      (max, item) => item.quantity > max ? item.quantity : max,
+    );
+    final maxAmount = items.fold<double>(
+      0,
+      (max, item) => item.amount > max ? item.amount : max,
+    );
+
+    return AdminPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '近 7 日销售趋势',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '按订单完成日期统计',
+            style: TextStyle(color: AdminColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          const Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _TrendLegend(color: Color(0xFF147D64), label: '售出数量'),
+              _TrendLegend(color: Color(0xFF2F6FE4), label: '销售额'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (items.isEmpty)
+            const Text('暂无已完成订单数据', style: TextStyle(color: AdminColors.muted))
+          else ...[
+            SizedBox(
+              height: 220,
+              child: LayoutBuilder(
+                builder: (_, constraints) => CustomPaint(
+                  painter: _DailySalesTrendPainter(
+                    items: items,
+                    maxQuantity: maxQuantity,
+                    maxAmount: maxAmount,
+                  ),
+                  child: SizedBox(width: constraints.maxWidth),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 18,
+              runSpacing: 6,
+              children: [
+                Text(
+                  '数量 0–$maxQuantity 本',
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '销售额 0–${money(maxAmount)}',
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendLegend extends StatelessWidget {
+  const _TrendLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(width: 18, height: 3, color: color),
+      const SizedBox(width: 6),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
+}
+
+class _DailySalesTrendPainter extends CustomPainter {
+  const _DailySalesTrendPainter({
+    required this.items,
+    required this.maxQuantity,
+    required this.maxAmount,
+  });
+
+  final List<DailySale> items;
+  final int maxQuantity;
+  final double maxAmount;
+
+  static const _quantityColor = Color(0xFF147D64);
+  static const _amountColor = Color(0xFF2F6FE4);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const left = 12.0;
+    const right = 12.0;
+    const top = 12.0;
+    const bottom = 30.0;
+    final chartWidth = (size.width - left - right).clamp(0.0, double.infinity);
+    final chartHeight = (size.height - top - bottom).clamp(
+      0.0,
+      double.infinity,
+    );
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE5E7EB)
+      ..strokeWidth = 1;
+
+    for (var index = 0; index <= 3; index++) {
+      final y = top + chartHeight * index / 3;
+      canvas.drawLine(Offset(left, y), Offset(left + chartWidth, y), gridPaint);
+    }
+
+    if (items.isEmpty || chartWidth == 0 || chartHeight == 0) return;
+
+    final quantityPoints = <Offset>[];
+    final amountPoints = <Offset>[];
+    for (var index = 0; index < items.length; index++) {
+      final x = items.length == 1
+          ? left + chartWidth / 2
+          : left + chartWidth * index / (items.length - 1);
+      quantityPoints.add(
+        Offset(x, _yFor(items[index].quantity, maxQuantity, top, chartHeight)),
+      );
+      amountPoints.add(
+        Offset(x, _yFor(items[index].amount, maxAmount, top, chartHeight)),
+      );
+      _paintLabel(canvas, items[index].date, x, size, left, right);
+    }
+
+    _paintSeries(canvas, quantityPoints, _quantityColor);
+    _paintSeries(canvas, amountPoints, _amountColor);
+  }
+
+  double _yFor(num value, num maximum, double top, double chartHeight) {
+    final ratio = maximum == 0 ? 0.0 : value / maximum;
+    return top + chartHeight * (1 - ratio);
+  }
+
+  void _paintSeries(Canvas canvas, List<Offset> points, Color color) {
+    if (points.isEmpty) return;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(path, paint);
+
+    final pointPaint = Paint()..color = color;
+    for (final point in points) {
+      canvas.drawCircle(point, 3.5, pointPaint);
+      canvas.drawCircle(point, 1.5, Paint()..color = Colors.white);
+    }
+  }
+
+  void _paintLabel(
+    Canvas canvas,
+    String value,
+    double x,
+    Size size,
+    double left,
+    double right,
+  ) {
+    final label = value.length >= 10 ? value.substring(5, 10) : value;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(color: AdminColors.muted, fontSize: 10),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final labelX = math
+        .max(
+          left,
+          math.min(x - painter.width / 2, size.width - right - painter.width),
+        )
+        .toDouble();
+    painter.paint(canvas, Offset(labelX, size.height - 18));
+  }
+
+  @override
+  bool shouldRepaint(covariant _DailySalesTrendPainter oldDelegate) =>
+      oldDelegate.items != items ||
+      oldDelegate.maxQuantity != maxQuantity ||
+      oldDelegate.maxAmount != maxAmount;
 }
 
 class _RankPanel extends StatelessWidget {

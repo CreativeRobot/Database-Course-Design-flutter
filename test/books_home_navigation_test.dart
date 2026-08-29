@@ -34,7 +34,8 @@ void main() {
 
   test('search results retain the catalog filters', () {
     expect(searchSource, contains('class _SearchFilters'));
-    expect(searchSource, contains('全部分类'));
+    expect(searchSource, contains('全部一级分类'));
+    expect(searchSource, contains('全部二级分类'));
     expect(searchSource, contains('只看有库存'));
   });
 }

@@ -33,8 +33,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   Future<void> _manageAddresses() async {
     await context.push('/profile');
-    if (mounted) {
-      ref.invalidate(checkoutAddressesProvider);
+    if (!mounted) return;
+
+    final addresses = await ref.refresh(checkoutAddressesProvider.future);
+    if (!mounted) return;
+    if (_selectedAddressId != null &&
+        !addresses.any((address) => address.id == _selectedAddressId)) {
+      setState(() => _selectedAddressId = null);
     }
   }
 

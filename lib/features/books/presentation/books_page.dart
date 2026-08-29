@@ -72,7 +72,6 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                     onSearch: _search,
                     onCart: () => _protectedAction(context, '/cart'),
                     onAdmin: () => _protectedAction(context, '/admin'),
-                    onOrders: () => _protectedAction(context, '/orders'),
                     onProfile: () => _protectedAction(context, '/profile'),
                     onLogin: () => context.go('/login'),
                   ),
@@ -248,7 +247,6 @@ class _BooksHeader extends StatelessWidget {
     required this.onSearch,
     required this.onCart,
     required this.onAdmin,
-    required this.onOrders,
     required this.onProfile,
     required this.onLogin,
   });
@@ -259,7 +257,6 @@ class _BooksHeader extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onCart;
   final VoidCallback onAdmin;
-  final VoidCallback onOrders;
   final VoidCallback onProfile;
   final VoidCallback onLogin;
 
@@ -299,12 +296,6 @@ class _BooksHeader extends StatelessWidget {
                     label: const Text('管理台'),
                   ),
                 ],
-                TextButton.icon(
-                  onPressed: onOrders,
-                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                  label: const Text('订单'),
-                ),
-                const SizedBox(width: 10),
               ],
               if (isAuthenticated)
                 Tooltip(

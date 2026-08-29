@@ -178,7 +178,12 @@ class _AdminOrdersPageState extends ConsumerState<AdminOrdersPage> {
     try {
       await ref.read(adminRepositoryProvider).shipOrder(order.id);
       _refresh();
-      if (mounted) showAdminMessage(context, '订单已发货');
+      if (mounted)
+        showAdminMessage(
+          context,
+          '订单已发货',
+          duration: const Duration(milliseconds: 1500),
+        );
     } catch (e) {
       if (mounted) showAdminMessage(context, e.toString());
     }

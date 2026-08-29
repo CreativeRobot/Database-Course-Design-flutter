@@ -13,7 +13,19 @@ void main() {
     'lib/features/profile/presentation/profile_page.dart',
   ).readAsStringSync();
   final ordersSource = File(
-    'lib/features/orders/presentation/orders_controller.dart',
+    'lib/features/orders/presentation/orders_page.dart',
+  ).readAsStringSync();
+  final orderDetailSource = File(
+    'lib/features/orders/presentation/order_detail_page.dart',
+  ).readAsStringSync();
+  final adminOrdersSource = File(
+    'lib/features/admin/presentation/admin_orders_reviews_pages.dart',
+  ).readAsStringSync();
+  final adminOverviewSource = File(
+    'lib/features/admin/presentation/admin_overview_page.dart',
+  ).readAsStringSync();
+  final adminModelsSource = File(
+    'lib/features/admin/data/admin_models.dart',
   ).readAsStringSync();
 
   test('admin navigation animates newly selected content', () {
@@ -33,7 +45,7 @@ void main() {
     () {
       final header = booksSource.substring(
         booksSource.indexOf('class _BooksHeader'),
-        booksSource.indexOf('class _BookStoreMark'),
+        booksSource.indexOf('class _HeaderSearch'),
       );
 
       expect(header, contains('onTap: onProfile'));
@@ -41,23 +53,76 @@ void main() {
     },
   );
 
+  test('book header leaves order access to the user center', () {
+    final header = booksSource.substring(
+      booksSource.indexOf('class _BooksHeader'),
+      booksSource.indexOf('class _HeaderSearch'),
+    );
+
+    expect(header, isNot(contains('onOrders')));
+    expect(header, isNot(contains("Text('订单')")));
+  });
+
+  test('user center keeps profile editing out of the navigation', () {
+    expect(
+      profileSource,
+      contains('ProfileSection { overview, orders, security }'),
+    );
+    expect(profileSource, isNot(contains('ProfileSection.profile')));
+    expect(profileSource, isNot(contains('class _ProfileEditor')));
+    expect(profileSource, isNot(contains('编辑资料')));
+    expect(profileSource, contains('ProfileSection.orders =>'));
+  });
+
   test(
-    'profile keeps address editing in personal details and shows shipped books',
+    'overview owns nickname, contact, and address management entry points',
     () {
       final overview = profileSource.substring(
         profileSource.indexOf('class _OverviewSection'),
-        profileSource.indexOf('class _ProfileEditor'),
-      );
-      final profileEditor = profileSource.substring(
-        profileSource.indexOf('class _ProfileEditor'),
-        profileSource.indexOf('class _AddressSection'),
+        profileSource.indexOf('class _MetricTile'),
       );
 
-      expect(overview, isNot(contains('_AddressSection(')));
-      expect(profileEditor, contains('_AddressSection('));
-      expect(profileSource, contains('_ShippingOrdersPanel'));
-      expect(ordersSource, contains('shippedOrdersProvider'));
-      expect(ordersSource, contains("status: 'SHIPPED'"));
+      expect(overview, contains('onEditNickname'));
+      expect(overview, contains('onEditEmail'));
+      expect(overview, contains('onEditPhone'));
+      expect(overview, contains('onManageAddresses'));
+      expect(overview, contains('profile.phone'));
+      expect(overview, contains('手机号'));
+      expect(profileSource, contains('class _AddressManagementDialog'));
     },
   );
+
+  test('orders can be rendered as embedded user-center content', () {
+    expect(profileSource, contains('OrdersContent('));
+    expect(ordersSource, contains('class OrdersContent'));
+    expect(ordersSource, contains('embedded'));
+    expect(
+      profileSource,
+      contains('ProfileSection.orders => OrdersContent(embedded: true)'),
+    );
+    expect(ordersSource, contains("'SHIPPED'"));
+  });
+  test('payment and shipment success feedback dismisses quickly', () {
+    expect(
+      orderDetailSource,
+      contains("duration: Duration(milliseconds: 1500)"),
+    );
+    expect(
+      adminOrdersSource,
+      contains("duration: const Duration(milliseconds: 1500)"),
+    );
+    expect(adminSource, contains('Duration? duration'));
+  });
+
+  test('admin overview renders a daily quantity and revenue line trend', () {
+    expect(adminModelsSource, contains('dailySales'));
+    expect(adminModelsSource, contains('class DailySale'));
+    expect(
+      adminOverviewSource,
+      contains('_DailySalesTrendChart(stats.dailySales)'),
+    );
+    expect(adminOverviewSource, contains('CustomPaint('));
+    expect(adminOverviewSource, contains("'售出数量'"));
+    expect(adminOverviewSource, contains("'销售额'"));
+  });
 }

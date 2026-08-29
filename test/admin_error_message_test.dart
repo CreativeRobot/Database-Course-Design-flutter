@@ -9,21 +9,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Builder(
-            key: key,
-            builder: (_) => const SizedBox.shrink(),
-          ),
+          body: Builder(key: key, builder: (_) => const SizedBox.shrink()),
         ),
       ),
     );
 
-    showAdminActionError(
+    showAdminError(
       key.currentContext!,
-      const ApiException(
-        statusCode: 409,
-        code: 409,
-        message: '该作者已关联图书，无法删除',
-      ),
+      const ApiException(statusCode: 409, code: 409, message: '该作者已关联图书，无法删除'),
     );
     await tester.pump();
 
