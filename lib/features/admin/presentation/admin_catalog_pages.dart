@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/book_pricing.dart';
 import '../../../core/utils/media_url.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
@@ -264,7 +265,7 @@ class _BookRow extends StatelessWidget {
             _ => onStatus(),
           },
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Text('编辑图书')),
+            const PopupMenuItem(value: 'edit', child: Text('编辑图书与折扣')),
             const PopupMenuItem(value: 'stock', child: Text('调整库存')),
             PopupMenuItem(
               value: 'status',
@@ -317,6 +318,9 @@ class _BookDialogState extends State<_BookDialog> {
       'original': TextEditingController(
         text: book?.originalPrice.toStringAsFixed(2),
       ),
+      'discount': TextEditingController(
+        text: _initialDiscountPercent(book).toStringAsFixed(2),
+      ),
       'sale': TextEditingController(text: book?.salePrice.toStringAsFixed(2)),
       'stock': TextEditingController(
         text: book == null ? '0' : '${book.stock}',
@@ -327,6 +331,7 @@ class _BookDialogState extends State<_BookDialog> {
       'description': TextEditingController(text: book?.description),
       'cover': TextEditingController(text: book?.coverUrl),
     };
+    _syncSalePrice();
   }
 
   @override
@@ -375,8 +380,22 @@ class _BookDialogState extends State<_BookDialog> {
                       validator: (value) => value == null ? '请选择出版社' : null,
                     ),
                   ),
-                  _field('original', '原价', required: true, number: true),
-                  _field('sale', '售价', required: true, number: true),
+                  _field(
+                    'original',
+                    '原价',
+                    required: true,
+                    number: true,
+                    onChanged: (_) => _syncSalePrice(),
+                  ),
+                  _field(
+                    'discount',
+                    '折扣（%）',
+                    required: true,
+                    number: true,
+                    helperText: '100 为原价，80 表示 8 折',
+                    onChanged: (_) => _syncSalePrice(),
+                  ),
+                  _field('sale', '折后售价（自动计算）', number: true, readOnly: true),
                   if (widget.book == null)
                     _field('stock', '初始库存', number: true),
                   _field('date', '出版日期 YYYY-MM-DD'),
@@ -485,13 +504,21 @@ class _BookDialogState extends State<_BookDialog> {
     String label, {
     bool required = false,
     bool number = false,
+    bool readOnly = false,
+    String? helperText,
+    ValueChanged<String>? onChanged,
   }) => SizedBox(
     width: 350,
     child: TextFormField(
       controller: _fields[key],
-      keyboardType: number ? TextInputType.number : null,
+      keyboardType: number
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : null,
+      readOnly: readOnly,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
+        helperText: helperText,
         border: const OutlineInputBorder(),
       ),
       validator: (value) {
@@ -535,9 +562,23 @@ class _BookDialogState extends State<_BookDialog> {
       return;
     }
     final original = double.parse(_fields['original']!.text);
-    final sale = double.parse(_fields['sale']!.text);
-    if (sale > original) {
-      setState(() => _error = '售价不能高于原价');
+    if (!original.isFinite || original < 0) {
+      setState(() => _error = '原价不能为负数');
+      return;
+    }
+    final discount = double.tryParse(_fields['discount']!.text);
+    if (discount == null) {
+      setState(() => _error = '请输入有效折扣');
+      return;
+    }
+    late final double sale;
+    try {
+      sale = BookPricing.salePrice(
+        originalPrice: original,
+        discountPercent: discount,
+      );
+    } on ArgumentError {
+      setState(() => _error = '折扣必须在 0 到 100 之间');
       return;
     }
     setState(() {
@@ -568,6 +609,35 @@ class _BookDialogState extends State<_BookDialog> {
         _saving = false;
         _error = appErrorMessage(error);
       });
+    }
+  }
+
+  double _initialDiscountPercent(BookDetail? book) {
+    if (book == null) return 100;
+    try {
+      return BookPricing.discountPercent(
+        originalPrice: book.originalPrice,
+        salePrice: book.salePrice,
+      );
+    } on ArgumentError {
+      return 100;
+    }
+  }
+
+  void _syncSalePrice() {
+    final original = double.tryParse(_fields['original']!.text);
+    final discount = double.tryParse(_fields['discount']!.text);
+    if (original == null || discount == null) {
+      _fields['sale']!.text = '';
+      return;
+    }
+    try {
+      _fields['sale']!.text = BookPricing.salePrice(
+        originalPrice: original,
+        discountPercent: discount,
+      ).toStringAsFixed(2);
+    } on ArgumentError {
+      _fields['sale']!.text = '';
     }
   }
 

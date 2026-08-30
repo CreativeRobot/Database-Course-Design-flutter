@@ -38,3 +38,8 @@
 - 实际 Flutter Git 仓库位于 `D:\no game\Code\DatabaseHomework\BookStore_Flutter\flutter_application_bookstore`，当前 `HEAD` 为 `32412ea chore: save current workspace state`，工作区干净。
 - 需求已确认：管理员设置 0–100% 折扣；100% 原价，0% 免费；原价保留，前台使用折后价。
 - 本轮尚未修改业务代码。
+- `flutter test --no-pub` was started for fresh baseline verification but produced no output for ~45 seconds and was interrupted; the existing project history records a prior full-suite pass, but this run is not evidence of a current pass.
+- `rg.exe` could not start in the sandbox (`拒绝访问`), so code search uses PowerShell `Get-ChildItem` + `Select-String`.
+- Existing backend and Flutter contracts already persist `originalPrice` and `salePrice`; no discount column/API field exists. The least invasive implementation is to add a discount-rate input in the admin edit dialog and calculate/persist `salePrice` through the existing API. Customer catalog/detail already show sale price and strike-through original price when discounted.
+- TDD RED attempt: the new `test/book_pricing_test.dart` correctly references the not-yet-created pricing utility, but direct Dart test startup failed before test collection because Dart analytics attempted to create `C:\Users\liyil\AppData\Roaming\.dart-tool` and was denied. Next run suppresses analytics and redirects HOME/APPDATA to a writable temp folder.
+- The backend `BookService.updateBook` resolves omitted originalPrice from the existing book and validates the new salePrice, so a discount-only update can safely reuse the existing update contract; no Java/schema change is required for this UI feature.

@@ -39,3 +39,10 @@
 - 用户确认按“先提交基线，再实现管理员图书折扣”执行。
 - 已发现项目根目录下的 Flutter 仓库实际位于 `flutter_application_bookstore` 子目录。
 - 当前仓库干净，基线 HEAD 为 `32412ea`；尚需通过本轮新鲜验证后创建明确的折扣开发前基线提交。
+- 2026-08-30：新鲜基线测试启动后约 45 秒无输出，已中止；不能据此声称测试通过。已确认可用两套 Dart SDK，可绕过 Flutter 全局锁运行纯 Dart 逻辑测试。
+- 2026-08-30：现有后端只持久化原价/售价，Flutter 管理员编辑对话框也已支持售价；本轮将用折扣率输入计算售价，复用既有 `salePrice` API 合同，不新增数据库迁移。
+- 2026-08-30：`rg.exe` 在沙箱中启动被拒绝，改用 PowerShell 搜索文件。
+- 2026-08-30：已先写 `test/book_pricing_test.dart`。直接 Dart 测试未进入收集阶段，因 analytics 写入用户目录被拒绝；下一步改用禁用 analytics + 可写临时 HOME，继续确认 RED。
+- 2026-08-30：折扣率实现已落在管理员图书编辑对话框：新增折扣（%）输入，修改原价/折扣时实时计算折后售价，保存仍通过既有 `originalPrice` + `salePrice` 请求体；菜单文案改为“编辑图书与折扣”。
+- 2026-08-30：`dart format` 已成功处理 4 个相关 Dart 文件；纯工具检查和 `dart analyze lib/core/utils/book_pricing.dart` 均通过。
+- 2026-08-30：尝试使用第二套 Flutter SDK 离线获取依赖/分析，因本地 PUB_CACHE 缺少 `test` 包而失败；因此尚未取得 Flutter 全套测试或完整 analyze 的通过证据。
