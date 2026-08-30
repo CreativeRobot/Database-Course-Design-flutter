@@ -33,3 +33,8 @@
 - 2026-08-29：widget 测试临时输出确认实际渲染为 `Home | Page Not Found`，不是认证持久化或登录文案问题。`BookStoreApp` 的 GoRouter 在测试环境未解析初始路径；下一步读取 `AppRoutePaths` 与现有路由测试，定位 `initialLocation`/路由配置为何落到 Not Found，并以路由级回归测试驱动最小修复。诊断输出将在修复后移除。
 - 2026-08-29：验证显示：`admin_error_message_test.dart`、`books_admin_navigation_test.dart`、`books_home_navigation_test.dart` 已通过；`widget_test.dart` 仍失败。`overridePlatformDefaultLocation: true` 单独不足以让测试环境解析 `/login`，需继续调查 GoRouter 初始 URI/测试绑定。
 - 2026-08-29：最终根因已确认：`widget_test.dart` 的 ProviderScope 未覆盖 `appConfigProvider`，令认证依赖在 GoRouter redirect 中构造时抛出 `API_BASE_URL is required when APP_ENV is development`；GoRouter 将其包装为 redirect 异常，显示 Page Not Found。已撤销未通过的根路由改动，改为在测试中注入 `http://127.0.0.1:1` 的 AppConfig 并清空 SharedPreferences。该单测已实际通过。
+
+## 2026-08-30 管理员图书折扣任务
+- 实际 Flutter Git 仓库位于 `D:\no game\Code\DatabaseHomework\BookStore_Flutter\flutter_application_bookstore`，当前 `HEAD` 为 `32412ea chore: save current workspace state`，工作区干净。
+- 需求已确认：管理员设置 0–100% 折扣；100% 原价，0% 免费；原价保留，前台使用折后价。
+- 本轮尚未修改业务代码。
