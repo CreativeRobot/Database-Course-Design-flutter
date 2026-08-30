@@ -46,3 +46,4 @@
 - 2026-08-30：折扣率实现已落在管理员图书编辑对话框：新增折扣（%）输入，修改原价/折扣时实时计算折后售价，保存仍通过既有 `originalPrice` + `salePrice` 请求体；菜单文案改为“编辑图书与折扣”。
 - 2026-08-30：`dart format` 已成功处理 4 个相关 Dart 文件；纯工具检查和 `dart analyze lib/core/utils/book_pricing.dart` 均通过。
 - 2026-08-30：尝试使用第二套 Flutter SDK 离线获取依赖/分析，因本地 PUB_CACHE 缺少 `test` 包而失败；因此尚未取得 Flutter 全套测试或完整 analyze 的通过证据。
+- 2026-08-30：功能版本已提交为 `e587e6c feat: add admin book discount pricing`；提交后工作区干净。提交后复跑 `dart analyze lib/core/utils/book_pricing.dart`、`tool/book_pricing_check.dart` 和提交 diff 检查均通过。
