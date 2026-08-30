@@ -10,6 +10,8 @@ class Book {
     required this.stock,
     required this.status,
     this.coverUrl,
+    this.preSale = false,
+    this.preSaleReleaseTime,
   });
 
   factory Book.fromJson(dynamic json) {
@@ -27,6 +29,10 @@ class Book {
       stock: (json['stock'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'OFF_SALE',
       coverUrl: json['coverUrl'] as String?,
+      preSale: json['preSale'] as bool? ?? false,
+      preSaleReleaseTime: DateTime.tryParse(
+        json['preSaleReleaseTime'] as String? ?? '',
+      ),
     );
   }
 
@@ -40,4 +46,6 @@ class Book {
   final int stock;
   final String status;
   final String? coverUrl;
+  final bool preSale;
+  final DateTime? preSaleReleaseTime;
 }

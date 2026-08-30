@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/book_presale.dart';
 import '../../../core/utils/book_pricing.dart';
 import '../../../core/utils/media_url.dart';
 import '../../../data/models/book/book.dart';
@@ -250,6 +251,17 @@ class _BookRow extends StatelessWidget {
                 'ISBN ${book.isbn} · ${book.publisherName}',
                 style: const TextStyle(color: AdminColors.muted, fontSize: 11),
               ),
+              if (isActivePreSale(book.preSale, book.preSaleReleaseTime)) ...[
+                const SizedBox(height: 4),
+                Text(
+                  preSaleNotice(book.preSaleReleaseTime!),
+                  style: const TextStyle(
+                    color: Color(0xFFD97706),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -301,6 +313,7 @@ class _BookDialogState extends State<_BookDialog> {
   late int? _publisherId;
   late Set<int> _authorIds;
   late Set<int> _categoryIds;
+  late bool _preSale;
   bool _saving = false;
   bool _uploading = false;
   String? _error;
@@ -312,6 +325,7 @@ class _BookDialogState extends State<_BookDialog> {
     _publisherId = book?.publisherId == 0 ? null : book?.publisherId;
     _authorIds = book?.authors.map((e) => e.id).toSet() ?? {};
     _categoryIds = book?.categories.map((e) => e.id).toSet() ?? {};
+    _preSale = book?.preSale ?? false;
     _fields = {
       'isbn': TextEditingController(text: book?.isbn),
       'title': TextEditingController(text: book?.title),
@@ -330,6 +344,11 @@ class _BookDialogState extends State<_BookDialog> {
       'pages': TextEditingController(text: book?.pages?.toString()),
       'description': TextEditingController(text: book?.description),
       'cover': TextEditingController(text: book?.coverUrl),
+      'preSaleReleaseTime': TextEditingController(
+        text: book?.preSaleReleaseTime == null
+            ? ''
+            : formatPreSaleReleaseTime(book!.preSaleReleaseTime!),
+      ),
     };
     _syncSalePrice();
   }
@@ -401,6 +420,34 @@ class _BookDialogState extends State<_BookDialog> {
                   _field('date', '出版日期 YYYY-MM-DD'),
                   _field('edition', '版本'),
                   _field('pages', '页数', number: true),
+                  SizedBox(
+                    width: 350,
+                    child: SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: _preSale,
+                      title: const Text('开启预售'),
+                      subtitle: const Text('用户可立即下单付款，发售前不可发货'),
+                      onChanged: (value) => setState(() => _preSale = value),
+                    ),
+                  ),
+                  if (_preSale)
+                    SizedBox(
+                      width: 350,
+                      child: TextFormField(
+                        controller: _fields['preSaleReleaseTime'],
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: '预计发售时间',
+                          helperText: '必须晚于当前时间',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            tooltip: '选择日期和时间',
+                            onPressed: _pickPreSaleReleaseTime,
+                            icon: const Icon(Icons.event_outlined),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -581,6 +628,20 @@ class _BookDialogState extends State<_BookDialog> {
       setState(() => _error = '折扣必须在 0 到 100 之间');
       return;
     }
+    DateTime? preSaleReleaseTime;
+    if (_preSale) {
+      preSaleReleaseTime = _parseDateTimeInput(
+        _fields['preSaleReleaseTime']!.text,
+      );
+      if (preSaleReleaseTime == null) {
+        setState(() => _error = '请选择预计发售时间');
+        return;
+      }
+      if (!preSaleReleaseTime.isAfter(DateTime.now())) {
+        setState(() => _error = '预计发售时间必须晚于当前时间');
+        return;
+      }
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -591,6 +652,10 @@ class _BookDialogState extends State<_BookDialog> {
       'publisherId': _publisherId,
       'originalPrice': original,
       'salePrice': sale,
+      'preSale': _preSale,
+      'preSaleReleaseTime': _preSale
+          ? preSaleReleaseTime!.toIso8601String()
+          : null,
       if (widget.book == null)
         'stock': int.tryParse(_fields['stock']!.text) ?? 0,
       'publishDate': _nullText('date'),
@@ -610,6 +675,39 @@ class _BookDialogState extends State<_BookDialog> {
         _error = appErrorMessage(error);
       });
     }
+  }
+
+  Future<void> _pickPreSaleReleaseTime() async {
+    final now = DateTime.now();
+    final parsed = _parseDateTimeInput(_fields['preSaleReleaseTime']!.text);
+    final initial = parsed != null && parsed.isAfter(now)
+        ? parsed
+        : now.add(const Duration(days: 1));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 10, 12, 31),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null) return;
+    final releaseTime = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+    _fields['preSaleReleaseTime']!.text = formatPreSaleReleaseTime(releaseTime);
+  }
+
+  DateTime? _parseDateTimeInput(String value) {
+    final normalized = value.trim().replaceFirst(' ', 'T');
+    return DateTime.tryParse(normalized);
   }
 
   double _initialDiscountPercent(BookDetail? book) {

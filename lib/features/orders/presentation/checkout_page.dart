@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/utils/book_presale.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../cart/data/cart_models.dart';
 import '../../cart/presentation/cart_controller.dart';
@@ -551,6 +552,17 @@ class _ReviewLine extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
+              if (isActivePreSale(item.preSale, item.preSaleReleaseTime)) ...[
+                const SizedBox(height: 5),
+                Text(
+                  preSaleNotice(item.preSaleReleaseTime!),
+                  style: const TextStyle(
+                    color: Color(0xFFD97706),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
               const SizedBox(height: 6),
               Text(
                 '${money(item.salePrice)} × ${item.quantity}',

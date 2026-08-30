@@ -12,6 +12,8 @@ class CartItem {
     required this.selected,
     required this.available,
     required this.subtotal,
+    this.preSale = false,
+    this.preSaleReleaseTime,
     this.createTime,
     this.updateTime,
   });
@@ -33,6 +35,10 @@ class CartItem {
       selected: json['selected'] as bool? ?? false,
       available: json['available'] as bool? ?? false,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      preSale: json['preSale'] as bool? ?? false,
+      preSaleReleaseTime: DateTime.tryParse(
+        json['preSaleReleaseTime'] as String? ?? '',
+      ),
       createTime: DateTime.tryParse(json['createTime'] as String? ?? ''),
       updateTime: DateTime.tryParse(json['updateTime'] as String? ?? ''),
     );
@@ -50,6 +56,8 @@ class CartItem {
   final bool selected;
   final bool available;
   final double subtotal;
+  final bool preSale;
+  final DateTime? preSaleReleaseTime;
   final DateTime? createTime;
   final DateTime? updateTime;
 }

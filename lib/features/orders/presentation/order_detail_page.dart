@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/utils/book_presale.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../reviews/data/review_models.dart';
 import '../../reviews/presentation/reviews_controller.dart';
@@ -571,6 +572,17 @@ class _DetailLine extends StatelessWidget {
                 line.bookTitle,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
+              if (line.preSale && line.preSaleReleaseTime != null) ...[
+                const SizedBox(height: 7),
+                Text(
+                  preSaleNotice(line.preSaleReleaseTime!),
+                  style: const TextStyle(
+                    color: Color(0xFFD97706),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
               const SizedBox(height: 7),
               Text(
                 'ISBN ${line.isbn}  ·  ${money(line.unitPrice)} × ${line.quantity}',

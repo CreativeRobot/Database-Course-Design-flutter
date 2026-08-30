@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/book_presale.dart';
 import '../../../data/models/book/book.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 
@@ -87,6 +88,8 @@ class _CatalogBookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final releaseTime = book.preSaleReleaseTime;
+    final preSale = isActivePreSale(book.preSale, releaseTime);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -126,6 +129,19 @@ class _CatalogBookCard extends StatelessWidget {
                 fontSize: 11,
               ),
             ),
+            if (preSale && releaseTime != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                preSaleNotice(releaseTime),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFD97706),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             Text(
               money(book.salePrice),

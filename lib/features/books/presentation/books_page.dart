@@ -7,6 +7,7 @@ import 'books_controller.dart';
 
 import '../../../core/errors/app_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/book_presale.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_review.dart';
@@ -548,6 +549,8 @@ class _BookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final salePrice = (book.salePrice as num).toDouble();
     final originalPrice = (book.originalPrice as num).toDouble();
+    final releaseTime = book.preSaleReleaseTime as DateTime?;
+    final preSale = isActivePreSale(book.preSale as bool, releaseTime);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -598,6 +601,19 @@ class _BookCard extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+            if (preSale && releaseTime != null) ...[
+              const SizedBox(height: 7),
+              Text(
+                preSaleNotice(releaseTime),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFD97706),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -760,6 +776,8 @@ class _BookSummary extends StatelessWidget {
     final categories = (book.categories as List)
         .map((item) => item.name)
         .join(' / ');
+    final releaseTime = book.preSaleReleaseTime as DateTime?;
+    final preSale = isActivePreSale(book.preSale as bool, releaseTime);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -802,6 +820,27 @@ class _BookSummary extends StatelessWidget {
             ],
           ],
         ),
+        if (preSale && releaseTime != null) ...[
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              border: Border.all(color: const Color(0xFFFDBA74)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${preSaleNotice(releaseTime)}\n'
+              '现在可下单并付款，图书发售后安排发货。',
+              style: const TextStyle(
+                color: Color(0xFF9A3412),
+                height: 1.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 28),
         SizedBox(
           width: double.infinity,
@@ -822,6 +861,8 @@ class _BookSummary extends StatelessWidget {
                   ? '正在加入'
                   : onAdd == null
                   ? '暂不可购买'
+                  : preSale
+                  ? '加入预购'
                   : '加入购物车',
             ),
           ),

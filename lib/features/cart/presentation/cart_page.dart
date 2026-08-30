@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/utils/book_presale.dart';
 import '../data/cart_models.dart';
 import 'cart_controller.dart';
 import 'commerce_widgets.dart';
@@ -333,6 +334,20 @@ class _CartItemTile extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
+                    if (isActivePreSale(
+                      item.preSale,
+                      item.preSaleReleaseTime,
+                    )) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        preSaleNotice(item.preSaleReleaseTime!),
+                        style: const TextStyle(
+                          color: Color(0xFFD97706),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Text(
                       item.available ? '库存 ${item.stock} 本' : '暂不可购买',

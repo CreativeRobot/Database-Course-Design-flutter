@@ -85,6 +85,8 @@ class OrderLine {
     required this.unitPrice,
     required this.quantity,
     required this.subtotal,
+    this.preSale = false,
+    this.preSaleReleaseTime,
   });
 
   factory OrderLine.fromJson(dynamic json) {
@@ -99,6 +101,8 @@ class OrderLine {
       unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      preSale: json['preSale'] as bool? ?? false,
+      preSaleReleaseTime: _date(json['preSaleReleaseTime']),
     );
   }
 
@@ -109,6 +113,8 @@ class OrderLine {
   final double unitPrice;
   final int quantity;
   final double subtotal;
+  final bool preSale;
+  final DateTime? preSaleReleaseTime;
 }
 
 class PaymentResult {

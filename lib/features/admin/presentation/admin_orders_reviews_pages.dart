@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/utils/book_presale.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
@@ -283,8 +284,21 @@ class _OrderDetailDialog extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.auto_stories_outlined),
                 title: Text(item.bookTitle),
-                subtitle: Text(
-                  'ISBN ${item.isbn} · ${money(item.unitPrice)} × ${item.quantity}',
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ISBN ${item.isbn} · ${money(item.unitPrice)} × ${item.quantity}',
+                    ),
+                    if (item.preSale && item.preSaleReleaseTime != null)
+                      Text(
+                        preSaleNotice(item.preSaleReleaseTime!),
+                        style: const TextStyle(
+                          color: Color(0xFFD97706),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
                 ),
                 trailing: Text(money(item.subtotal)),
               ),
