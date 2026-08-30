@@ -1,0 +1,99 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle stickman
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #475569
+}
+
+actor 游客 as Visitor
+actor 普通用户 as Customer
+actor 管理员 as Admin
+actor 支付系统 as Payment
+
+rectangle "在线书店系统" {
+  package "公共浏览与认证" {
+    usecase "注册账号" as Register
+    usecase "登录系统" as Login
+    usecase "浏览图书" as Browse
+    usecase "搜索图书" as Search
+    usecase "查看图书详情" as Detail
+    usecase "查看图书评价" as ViewReview
+  }
+
+  package "用户购书与个人中心" {
+    usecase "查看推荐图书" as Recommend
+    usecase "管理购物车" as Cart
+    usecase "提交订单" as CreateOrder
+    usecase "支付订单" as Pay
+    usecase "查看/管理订单" as Orders
+    usecase "取消订单" as Cancel
+    usecase "确认收货" as Confirm
+    usecase "申请退款" as Refund
+    usecase "评价图书" as Review
+    usecase "管理个人资料" as Profile
+    usecase "管理收货地址" as Address
+    usecase "修改密码" as Password
+  }
+
+  package "后台管理" {
+    usecase "管理用户" as UserManage
+    usecase "管理图书" as BookManage
+    usecase "管理分类" as CategoryManage
+    usecase "管理作者与出版社" as CatalogManage
+    usecase "管理库存" as StockManage
+    usecase "管理订单与发货" as OrderManage
+    usecase "管理评论" as ReviewManage
+    usecase "审核退款" as RefundReview
+    usecase "查看统计信息" as Statistics
+    usecase "查看库存日志" as InventoryLog
+  }
+}
+
+Visitor --> Register
+Visitor --> Login
+Visitor --> Browse
+Visitor --> Search
+Visitor --> Detail
+Visitor --> ViewReview
+
+Customer --> Browse
+Customer --> Search
+Customer --> Detail
+Customer --> ViewReview
+Customer --> Recommend
+Customer --> Cart
+Customer --> CreateOrder
+Customer --> Pay
+Customer --> Orders
+Customer --> Cancel
+Customer --> Confirm
+Customer --> Refund
+Customer --> Review
+Customer --> Profile
+Customer --> Address
+Customer --> Password
+
+Payment --> Pay
+
+Admin --> UserManage
+Admin --> BookManage
+Admin --> CategoryManage
+Admin --> CatalogManage
+Admin --> StockManage
+Admin --> OrderManage
+Admin --> ReviewManage
+Admin --> RefundReview
+Admin --> Statistics
+Admin --> InventoryLog
+
+CreateOrder .> Cart : <<include>>
+CreateOrder .> Address : <<include>>
+Pay .> CreateOrder : <<include>>
+Refund .> Orders : <<extend>>
+Review .> Orders : <<extend>>
+OrderManage .> StockManage : <<include>>
+@enduml
