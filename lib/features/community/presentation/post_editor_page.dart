@@ -7,6 +7,7 @@ import '../../../app/router/app_route_paths.dart';
 import '../../../core/network/api_exception.dart';
 import '../data/community_models.dart';
 import 'community_controller.dart';
+import 'community_view_helpers.dart';
 import 'community_widgets.dart';
 
 class PostEditorPage extends ConsumerStatefulWidget {
@@ -22,14 +23,17 @@ class _PostEditorPageState extends ConsumerState<PostEditorPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  final _bookSearchController = TextEditingController();
   final List<PlatformFile> _images = [];
   final Set<int> _selectedBookIds = {};
+  String _bookSearchKeyword = '';
   bool _submitting = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _bookSearchController.dispose();
     super.dispose();
   }
 
@@ -102,6 +106,11 @@ class _PostEditorPageState extends ConsumerState<PostEditorPage> {
   Widget build(BuildContext context) {
     final books = ref.watch(communityBookOptionsProvider);
     final bookOptions = books.asData?.value ?? const [];
+    final visibleBookOptions = filterCommunityBookOptions(
+      bookOptions,
+      _selectedBookIds,
+      _bookSearchKeyword,
+    );
     return Scaffold(
       backgroundColor: CommunityColors.canvas,
       appBar: AppBar(
@@ -279,6 +288,29 @@ class _PostEditorPageState extends ConsumerState<PostEditorPage> {
                         style: TextStyle(color: CommunityColors.muted),
                       ),
                       const SizedBox(height: 12),
+                      TextField(
+                        controller: _bookSearchController,
+                        enabled: !_submitting,
+                        decoration: InputDecoration(
+                          hintText: '搜索要关联的图书',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          suffixIcon: _bookSearchKeyword.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: '清除图书搜索',
+                                  onPressed: () {
+                                    _bookSearchController.clear();
+                                    setState(() => _bookSearchKeyword = '');
+                                  },
+                                  icon: const Icon(Icons.close_rounded),
+                                ),
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _bookSearchKeyword = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       if (books.isLoading)
                         const Center(
                           child: Padding(
@@ -290,12 +322,14 @@ class _PostEditorPageState extends ConsumerState<PostEditorPage> {
                         const Text('图书选项加载失败，请稍后重试')
                       else if (bookOptions.isEmpty)
                         const Text('暂时没有可关联的图书')
+                      else if (visibleBookOptions.isEmpty)
+                        const Text('没有找到相关图书')
                       else
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            for (final book in bookOptions)
+                            for (final book in visibleBookOptions)
                               FilterChip(
                                 selected: _selectedBookIds.contains(book.id),
                                 avatar: const Icon(

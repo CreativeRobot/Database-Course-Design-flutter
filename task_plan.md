@@ -92,3 +92,31 @@
 | 初始工作目录不是 Git 根目录，实际仓库在 `flutter_application_bookstore` 子目录 | 1 | 后续所有 Git/代码操作定位到子目录 |
 | Python 命令不可用 | 1 | 不依赖 session-catchup，改用 PowerShell 和现有计划文件恢复上下文 |
 | Git safe.directory 拒绝仓库所有权 | 1 | 使用单次命令配置 `safe.directory=*`，不修改全局配置 |
+
+---
+## 2026-09-03 本轮任务：社区评论与关联图书体验
+
+### Goal
+完成三项社区体验修改：回复紧跟父评论、发帖关联图书支持书名搜索、首页社区入口与相邻入口一致为图标按钮且悬停显示“社区”。
+
+### Phases
+- [x] 确认需求范围与现有实现位置
+- [x] 为评论排列和图书筛选编写失败测试（RED）
+- [x] 实现评论排列、图书搜索和社区 Tooltip 图标入口（GREEN）
+- [x] 格式化并执行专项测试、静态分析和差异检查
+- [x] 提交本轮改动
+
+### Decisions
+- 一级评论保持接口原始顺序；直接回复紧跟对应父评论并保持回复原始顺序；孤立回复放在末尾。
+- 图书搜索按书名大小写不敏感包含匹配；已选但不匹配的图书仍显示且排在前面。
+- 桌面端和移动端社区入口统一为 `Tooltip(message: '社区') + IconButton`。
+
+### Errors Encountered
+| Error | Attempt | Resolution |
+|---|---:|---|
+| Git 因沙箱用户与仓库所有者不同报告 dubious ownership | 1 | 所有 Git 命令使用单次 `-c safe.directory=<repo>`，不修改全局配置。 |
+| 查询不存在的 `lib/data/models/books` 路径失败 | 1 | 已用 `rg` 定位实际模型路径为 `lib/data/models/book/book.dart`。 |
+| `flutter test` 在沙箱中 90 秒无输出且未结束 | 1 | 已中止；先确认 Flutter 可执行路径及仓库已有的本地缓存环境配置，再以相同测试重试。 |
+| 精确文本替换因源文件换行符与脚本片段不一致而停止；仅新 helper 文件已写入，页面尚未改动 | 1 | 改用自动适配源文件 LF/CRLF 的 guarded replacement，不重复原命令。 |
+| 针对 `books_page.dart` 的静态分析返回 4 个既有未使用私有组件 warning | 1 | 本次改动未涉及这些组件；保留警告记录，另对社区目录和新增测试执行无警告分析。 |
+| 完整 `flutter test --no-pub` 运行 98 项通过、4 个测试文件加载失败 | 1 | 失败均来自本轮未修改的既有测试/API 漂移：3 个验证码测试缺少 `securityQuestions` 参数，`homepage_sections_test.dart` 缺少 `BookCategory` 导入；保留专项 12/12 通过作为本轮验证，并在最终说明。 |

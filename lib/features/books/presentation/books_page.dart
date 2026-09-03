@@ -291,6 +291,23 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
   }
 }
 
+class CommunityNavigationButton extends StatelessWidget {
+  const CommunityNavigationButton({required this.onPressed, super.key});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: '社区',
+      child: IconButton(
+        onPressed: onPressed,
+        icon: const Icon(Icons.forum_outlined),
+      ),
+    );
+  }
+}
+
 class _BooksHeader extends StatelessWidget {
   const _BooksHeader({
     required this.compact,
@@ -337,11 +354,7 @@ class _BooksHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                TextButton.icon(
-                  onPressed: onCommunity,
-                  icon: const Icon(Icons.forum_outlined, size: 18),
-                  label: const Text('社区'),
-                ),
+                CommunityNavigationButton(onPressed: onCommunity),
                 Tooltip(
                   message: '随机一本图书',
                   child: IconButton(
@@ -368,13 +381,7 @@ class _BooksHeader extends StatelessWidget {
                 ],
               ],
               if (compact) ...[
-                Tooltip(
-                  message: '社区交流',
-                  child: IconButton(
-                    onPressed: onCommunity,
-                    icon: const Icon(Icons.forum_outlined),
-                  ),
-                ),
+                CommunityNavigationButton(onPressed: onCommunity),
                 Tooltip(
                   message: '随机一本图书',
                   child: IconButton(

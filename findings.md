@@ -43,3 +43,9 @@
 - Existing backend and Flutter contracts already persist `originalPrice` and `salePrice`; no discount column/API field exists. The least invasive implementation is to add a discount-rate input in the admin edit dialog and calculate/persist `salePrice` through the existing API. Customer catalog/detail already show sale price and strike-through original price when discounted.
 - TDD RED attempt: the new `test/book_pricing_test.dart` correctly references the not-yet-created pricing utility, but direct Dart test startup failed before test collection because Dart analytics attempted to create `C:\Users\liyil\AppData\Roaming\.dart-tool` and was denied. Next run suppresses analytics and redirects HOME/APPDATA to a writable temp folder.
 - The backend `BookService.updateBook` resolves omitted originalPrice from the existing book and validates the new salePrice, so a discount-only update can safely reuse the existing update contract; no Java/schema change is required for this UI feature.
+
+## 2026-09-03 社区三项修改发现
+- 评论页面当前直接遍历 `page.records`，需要在渲染前进行父子排列。
+- `CommunityComment` 已有 `parentId` 和 `isReply`，无需改 API 模型。
+- 发帖页已经一次加载全部 `Book` 选项，可进行本地书名搜索。
+- 首页桌面端社区入口当前是 `TextButton.icon`；相邻随机图书和购物车均是 `Tooltip + IconButton`。

@@ -47,3 +47,16 @@
 - 2026-08-30：`dart format` 已成功处理 4 个相关 Dart 文件；纯工具检查和 `dart analyze lib/core/utils/book_pricing.dart` 均通过。
 - 2026-08-30：尝试使用第二套 Flutter SDK 离线获取依赖/分析，因本地 PUB_CACHE 缺少 `test` 包而失败；因此尚未取得 Flutter 全套测试或完整 analyze 的通过证据。
 - 2026-08-30：功能版本已提交为 `e587e6c feat: add admin book discount pricing`；提交后工作区干净。提交后复跑 `dart analyze lib/core/utils/book_pricing.dart`、`tool/book_pricing_check.dart` 和提交 diff 检查均通过。
+
+## 2026-09-03 社区三项修改
+- 已确认范围与具体文件，准备开始 TDD RED 阶段。
+- 未修改生产代码。
+- 已先添加两组行为测试（评论排列/图书筛选、社区图标 Tooltip）。
+- 首次 RED 执行 `flutter test` 90 秒无输出，已中止，尚未取得预期编译失败证据。
+- GREEN 首次批量编辑在第一个页面替换处停止，原因是换行格式不匹配；仅新增 `community_view_helpers.dart`，其余生产文件未改。
+- 已完成 RED→GREEN：评论排列测试先因孤立回复顺序失败，修复后 3 项 helper 测试通过。
+- 社区专项测试共 12 项通过。
+- 包含 `books_page.dart` 的静态分析无 error，但返回 4 个既有未使用私有组件 warning（`_BooksHero`、`_BooksGrid`、`_BooksLoading`、`_InlineNotice`）。
+- 完整回归测试运行到 98 项通过、4 个测试文件加载失败；均为本轮外既有测试代码与当前 API/导入不一致，不涉及社区改动。
+- 社区代码和新增测试专项静态分析：`No issues found`。
+- 本轮社区三项修改已提交。

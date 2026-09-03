@@ -9,6 +9,7 @@ import '../../../core/providers.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/community_models.dart';
 import 'community_controller.dart';
+import 'community_view_helpers.dart';
 import 'community_widgets.dart';
 
 class PostDetailPage extends ConsumerStatefulWidget {
@@ -182,15 +183,18 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                       ),
                     );
                   }
+                  final arrangedComments = arrangeCommunityComments(
+                    page.records,
+                  );
                   final names = {
                     for (final comment in page.records)
                       comment.id: comment.authorName,
                   };
                   return SliverList.separated(
-                    itemCount: page.records.length,
+                    itemCount: arrangedComments.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final comment = page.records[index];
+                      final comment = arrangedComments[index];
                       return Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 920),
