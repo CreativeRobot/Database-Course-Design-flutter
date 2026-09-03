@@ -86,6 +86,7 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                     onRandomBook: randomCandidates.isEmpty
                         ? null
                         : () => _openRandomBook(randomCandidates),
+                    onCommunity: () => context.go('/community'),
                     onCart: () => _protectedAction(context, '/cart'),
                     onAdmin: () => _protectedAction(context, '/admin'),
                     onProfile: () => _protectedAction(context, '/profile'),
@@ -297,6 +298,7 @@ class _BooksHeader extends StatelessWidget {
     required this.searchController,
     required this.onSearch,
     required this.onRandomBook,
+    required this.onCommunity,
     required this.onCart,
     required this.onAdmin,
     required this.onProfile,
@@ -308,6 +310,7 @@ class _BooksHeader extends StatelessWidget {
   final TextEditingController searchController;
   final VoidCallback onSearch;
   final VoidCallback? onRandomBook;
+  final VoidCallback onCommunity;
   final VoidCallback onCart;
   final VoidCallback onAdmin;
   final VoidCallback onProfile;
@@ -334,6 +337,11 @@ class _BooksHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
+                TextButton.icon(
+                  onPressed: onCommunity,
+                  icon: const Icon(Icons.forum_outlined, size: 18),
+                  label: const Text('社区'),
+                ),
                 Tooltip(
                   message: '随机一本图书',
                   child: IconButton(
@@ -360,6 +368,13 @@ class _BooksHeader extends StatelessWidget {
                 ],
               ],
               if (compact) ...[
+                Tooltip(
+                  message: '社区交流',
+                  child: IconButton(
+                    onPressed: onCommunity,
+                    icon: const Icon(Icons.forum_outlined),
+                  ),
+                ),
                 Tooltip(
                   message: '随机一本图书',
                   child: IconButton(

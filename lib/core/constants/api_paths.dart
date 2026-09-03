@@ -45,6 +45,11 @@ abstract final class ApiPaths {
   static const refunds = '$orders/refunds';
   static String refund(int refundId) => '$refunds/$refundId';
 
+  static const communityPosts = '/api/community/posts';
+  static String communityPost(int postId) => '$communityPosts/$postId';
+  static String communityComments(int postId) =>
+      '${communityPost(postId)}/comments';
+  static const communityImageUpload = '/api/uploads/images';
   static const reviews = '/api/reviews';
   static const myReviews = '$reviews/me';
   static String review(int reviewId) => '$reviews/$reviewId';
@@ -93,4 +98,3 @@ abstract final class ApiPaths {
   static String adminRefundReview(int id) => '${adminRefund(id)}/review';
   static const adminImageUpload = '$admin/uploads/images';
 }
-

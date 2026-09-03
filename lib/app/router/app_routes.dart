@@ -6,6 +6,9 @@ import '../../features/books/presentation/books_page.dart';
 import '../../features/books/presentation/category_books_page.dart';
 import '../../features/books/presentation/search_results_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
+import '../../features/community/presentation/community_page.dart';
+import '../../features/community/presentation/post_detail_page.dart';
+import '../../features/community/presentation/post_editor_page.dart';
 import '../../features/orders/presentation/checkout_page.dart';
 import '../../features/orders/presentation/order_detail_page.dart';
 import '../../features/orders/presentation/orders_page.dart';
@@ -22,12 +25,32 @@ List<RouteBase> buildAppRoutes() => [
 
 List<GoRoute> _publicRoutes() => [
   GoRoute(path: AppRoutePaths.login, builder: (_, _) => const LoginPage()),
-  GoRoute(path: AppRoutePaths.forgotPassword, builder: (_, _) => const ForgotPasswordPage()),
+  GoRoute(
+    path: AppRoutePaths.forgotPassword,
+    builder: (_, _) => const ForgotPasswordPage(),
+  ),
   GoRoute(
     path: AppRoutePaths.register,
     builder: (_, _) => const RegisterPage(),
   ),
   GoRoute(path: AppRoutePaths.books, builder: (_, _) => const BooksPage()),
+  GoRoute(
+    path: AppRoutePaths.community,
+    builder: (_, _) => const CommunityPage(),
+  ),
+  GoRoute(
+    path: AppRoutePaths.newCommunityPost,
+    builder: (_, _) => const PostEditorPage(),
+  ),
+  GoRoute(
+    path: '${AppRoutePaths.community}/posts/:postId',
+    builder: (_, state) {
+      final postId = int.tryParse(state.pathParameters['postId'] ?? '');
+      return postId == null
+          ? const CommunityPage()
+          : PostDetailPage(postId: postId);
+    },
+  ),
   GoRoute(
     path: AppRoutePaths.search,
     builder: (_, state) => SearchResultsPage(
@@ -86,4 +109,3 @@ List<GoRoute> _administratorRoutes() => [
       builder: (_, _) => AdminPage(section: section),
     ),
 ];
-
