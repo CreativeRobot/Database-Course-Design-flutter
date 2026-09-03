@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/common/page_response.dart';
+import '../../community/data/community_models.dart';
 import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
 import '../data/admin_models.dart';
@@ -26,7 +27,9 @@ final bundleRepositoryProvider = Provider<BundleRepository>((ref) {
   return BundleRepository(ref.watch(apiClientProvider));
 });
 
-final adminBundlesProvider = FutureProvider.autoDispose<List<BookBundle>>((ref) {
+final adminBundlesProvider = FutureProvider.autoDispose<List<BookBundle>>((
+  ref,
+) {
   return ref.watch(bundleRepositoryProvider).adminList();
 });
 
@@ -132,6 +135,28 @@ final adminReviewsProvider = FutureProvider.autoDispose
           .watch(adminRepositoryProvider)
           .reviews(
             bookId: filter.bookId,
+            userId: filter.userId,
+            status: filter.status,
+            page: filter.page,
+          );
+    });
+
+typedef AdminCommunityPostFilter = ({
+  String? keyword,
+  int? userId,
+  int? status,
+  int page,
+});
+
+final adminCommunityPostsProvider = FutureProvider.autoDispose
+    .family<PageResponse<CommunityPost>, AdminCommunityPostFilter>((
+      ref,
+      filter,
+    ) {
+      return ref
+          .watch(adminRepositoryProvider)
+          .communityPosts(
+            keyword: filter.keyword,
             userId: filter.userId,
             status: filter.status,
             page: filter.page,

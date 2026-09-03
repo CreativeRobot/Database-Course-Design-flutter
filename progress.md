@@ -60,3 +60,24 @@
 - 完整回归测试运行到 98 项通过、4 个测试文件加载失败；均为本轮外既有测试代码与当前 API/导入不一致，不涉及社区改动。
 - 社区代码和新增测试专项静态分析：`No issues found`。
 - 本轮社区三项修改已提交。
+
+## 2026-09-03 管理员社区帖子管理
+- 已完成设计确认。
+- 已创建详细实施计划：`docs/superpowers/plans/2026-09-03-admin-community-post-moderation.md`。
+- 下一步按 TDD 先写后端失败测试。
+
+## 2026-09-03 管理员社区帖子管理续作
+- 后端功能已提交：`5453e5a feat: add admin community post moderation`。
+- 后端专项 `CommunityServiceTests` 已有 14 项通过证据；此前完整 Maven 为 117 项、0 failures、3 个既有 errors、4 skipped。
+- Flutter 管理员帖子页面、API、Provider、导航和测试已实现，尚待提交。
+- 此前 Flutter 相关回归 17/17 通过，新页面与测试分析为 `No issues found`；完整套件为 102 项通过、4 个既有测试文件加载失败。
+- 已确认并行改动 `community_widgets.dart`、`post_detail_page.dart`、`.planning/` 不属于本轮，必须排除在提交之外。
+- 续作检查：管理员帖子页面与测试文件内容完整；本轮文件 `git diff --check` 未发现空白错误，仅提示计划文件后续会按 Git 配置转换行尾。
+- 已再次确认并行改动仅为 `community_widgets.dart`、`post_detail_page.dart` 与 `.planning/community-post-book-gallery/`；管理员帖子页面的筛选、正整数校验、确认弹窗、屏蔽/恢复与刷新流程均已落盘。
+- 提交前格式化首次经 `dart.bat` 运行 60 秒无输出，已中止；检查发现 SDK 内直接 `dart.exe` 可用，下一步改用直接可执行文件。
+- 直接 `dart.exe` 已确认版本 3.12.2，但格式化因 analytics 尝试创建沙箱外 `AppData\Roaming\.dart-tool` 而失败；根因已定位，改用可写临时 `APPDATA`/`HOME`。
+- 提交前新鲜验证：8 个相关 Flutter 测试文件共 17/17 通过。`dart format` 处理 6 个文件、0 项改写。
+- 提交前新鲜静态分析：管理员帖子页面与新增测试 `No issues found`。
+- 后端提交后新鲜专项验证：`mvn -Dtest=CommunityServiceTests test` 共 14 项，0 failures、0 errors，`BUILD SUCCESS`。
+
+- 首次暂存后 git diff --cached --check 发现实施计划 1 处行尾空格和 EOF 多余空行，已清理并准备重新检查。

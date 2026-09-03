@@ -92,6 +92,10 @@ abstract final class ApiPaths {
   static String adminReview(int id) => '$adminReviews/$id';
   static String adminReviewStatus(int id) => '${adminReview(id)}/status';
 
+  static const adminCommunityPosts = '$admin/community/posts';
+  static String adminCommunityPostStatus(int id) =>
+      '$adminCommunityPosts/$id/status';
+
   static const adminInventoryLogs = '$admin/inventory-logs';
   static const adminRefunds = '$admin/refunds';
   static String adminRefund(int id) => '$adminRefunds/$id';

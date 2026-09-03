@@ -49,3 +49,12 @@
 - `CommunityComment` 已有 `parentId` 和 `isReply`，无需改 API 模型。
 - 发帖页已经一次加载全部 `Book` 选项，可进行本地书名搜索。
 - 首页桌面端社区入口当前是 `TextButton.icon`；相邻随机图书和购物车均是 `Tooltip + IconButton`。
+
+## 2026-09-03 管理员社区帖子管理发现
+- `CommunityPost.status` 已使用 1=正常、0=屏蔽；普通列表和详情查询已经限制 `status = 1`，因此管理员改为 0 后无需额外修改普通社区查询。
+- `/api/admin/**` 已由安全配置限制为管理员角色。
+- Flutter 管理端已有评价审核的筛选、确认、屏蔽/恢复交互，可复用其视觉和状态语义。
+- 后端仓库已有未跟踪运行时目录 `uploads/posts/`，本轮必须保持不变且不提交。
+- 后端管理员帖子管理已实现并提交为 `5453e5a feat: add admin community post moderation`；`uploads/posts/` 保持未跟踪且未提交。
+- Flutter 管理端实现已落盘但尚未提交；工作区另有并行产生的社区图书详情/图片画廊改动和 `.planning/`，本轮提交必须显式暂存，不能使用 `git add .`。
+- 提交前新鲜验证已完成：相关 Flutter 回归 17/17 通过，管理员帖子页面与新增测试静态分析无问题；后端 `CommunityServiceTests` 14/14 通过。

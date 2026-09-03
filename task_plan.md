@@ -120,3 +120,31 @@
 | 精确文本替换因源文件换行符与脚本片段不一致而停止；仅新 helper 文件已写入，页面尚未改动 | 1 | 改用自动适配源文件 LF/CRLF 的 guarded replacement，不重复原命令。 |
 | 针对 `books_page.dart` 的静态分析返回 4 个既有未使用私有组件 warning | 1 | 本次改动未涉及这些组件；保留警告记录，另对社区目录和新增测试执行无警告分析。 |
 | 完整 `flutter test --no-pub` 运行 98 项通过、4 个测试文件加载失败 | 1 | 失败均来自本轮未修改的既有测试/API 漂移：3 个验证码测试缺少 `securityQuestions` 参数，`homepage_sections_test.dart` 缺少 `BookCategory` 导入；保留专项 12/12 通过作为本轮验证，并在最终说明。 |
+
+---
+## 2026-09-03 管理员社区帖子管理
+
+### Goal
+管理员可查看全部社区帖子，按标题关键词、用户和状态筛选，并可屏蔽或恢复帖子；屏蔽后普通社区列表、详情和评论入口继续不可见。
+
+### Phases
+- [x] 完成设计确认与实施计划
+- [x] 后端测试 RED：管理员列表与状态修改
+- [x] 后端实现 GREEN 并提交：`5453e5a`
+- [x] Flutter 测试 RED：路径、导航、状态交互
+- [x] Flutter 数据层、页面和导航实现 GREEN
+- [x] 格式化、提交前新鲜验证
+- [ ] Flutter 提交
+
+### Constraints
+- 在现有工作区原地修改。
+- 不修改/提交 `demo/uploads/posts/`。
+- 状态值仅允许 0/1，并支持屏蔽后恢复。
+
+### Errors Encountered（管理员帖子管理）
+| Error | Attempt | Resolution |
+|---|---:|---|
+| `dart format` 通过 Flutter 的 `dart.bat` 启动后 60 秒无输出 | 1 | 中止卡住的包装脚本；已确认 SDK 内直接 `dart.exe` 存在，改用直接可执行文件完成格式化，避免重复同一失败路径。 |
+| 直接 `dart.exe format` 因无法写入用户 `AppData\Roaming\.dart-tool` 失败 | 2 | 根因是 Dart analytics 初始化写入沙箱外目录；设置可写临时 `APPDATA`/`HOME` 并禁用 analytics 后格式化成功。 |
+
+| 实施计划文档存在行尾空格和 EOF 多余空行，git diff --cached --check 失败 | 1 | 清理每行行尾及 EOF 后重新暂存并复查。 |

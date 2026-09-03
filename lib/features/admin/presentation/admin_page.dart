@@ -8,6 +8,7 @@ import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import 'admin_catalog_pages.dart';
 import 'admin_providers.dart';
+import 'admin_community_posts_page.dart';
 import 'admin_orders_reviews_pages.dart';
 import 'admin_overview_page.dart';
 import 'admin_users_page.dart';
@@ -22,6 +23,7 @@ enum AdminSection {
   categories('categories', '分类管理', Icons.account_tree_outlined),
   orders('orders', '订单管理', Icons.receipt_long_outlined),
   reviews('reviews', '评价审核', Icons.rate_review_outlined),
+  communityPosts('community-posts', '帖子管理', Icons.forum_outlined),
   inventory('inventory', '库存流水', Icons.inventory_2_outlined),
   users('users', '用户管理', Icons.people_outline),
   refunds('refunds', '售后审核', Icons.assignment_return_outlined),
@@ -47,6 +49,7 @@ class AdminPage extends ConsumerWidget {
       AdminSection.categories => const AdminCategoriesPage(),
       AdminSection.orders => const AdminOrdersPage(),
       AdminSection.reviews => const AdminReviewsPage(),
+      AdminSection.communityPosts => const AdminCommunityPostsPage(),
       AdminSection.inventory => const AdminInventoryPage(),
       AdminSection.users => const AdminUsersPage(),
       AdminSection.refunds => const AdminRefundsPage(),

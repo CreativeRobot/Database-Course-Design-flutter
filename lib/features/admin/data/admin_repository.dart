@@ -3,6 +3,7 @@ import '../../../core/network/api_client.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/common/page_response.dart';
+import '../../community/data/community_models.dart';
 import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
 import 'admin_models.dart';
@@ -283,6 +284,32 @@ class AdminRepository {
   Future<void> setReviewStatus(int id, int status) async {
     await _api.put(ApiPaths.adminReviewStatus(id), data: {'status': status});
   }
+
+  Future<PageResponse<CommunityPost>> communityPosts({
+    String? keyword,
+    int? userId,
+    int? status,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
+    ApiPaths.adminCommunityPosts,
+    queryParameters: {
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
+      if (userId != null) 'userId': userId,
+      if (status != null) 'status': status,
+      'page': page,
+      'size': size,
+    },
+    parser: communityPostPage,
+  )).data;
+
+  Future<CommunityPost> setCommunityPostStatus(int id, int status) async =>
+      (await _api.put(
+        ApiPaths.adminCommunityPostStatus(id),
+        data: {'status': status},
+        parser: CommunityPost.fromJson,
+      )).data;
 
   Future<PageResponse<InventoryLog>> inventoryLogs({
     int? bookId,
