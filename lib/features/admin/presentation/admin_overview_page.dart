@@ -296,15 +296,57 @@ class _DailySalesTrendChart extends StatelessWidget {
           else ...[
             SizedBox(
               height: 220,
-              child: LayoutBuilder(
-                builder: (_, constraints) => CustomPaint(
-                  painter: _DailySalesTrendPainter(
-                    items: items,
-                    maxQuantity: maxQuantity,
-                    maxAmount: maxAmount,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(
+                    width: 64,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '单位',
+                            style: TextStyle(
+                              color: AdminColors.muted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            '数量：本',
+                            style: TextStyle(
+                              color: AdminColors.muted,
+                              fontSize: 11,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            '金额：元',
+                            style: TextStyle(
+                              color: AdminColors.muted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: SizedBox(width: constraints.maxWidth),
-                ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (_, constraints) => CustomPaint(
+                        painter: _DailySalesTrendPainter(
+                          items: items,
+                          maxQuantity: maxQuantity,
+                          maxAmount: maxAmount,
+                        ),
+                        child: SizedBox(width: constraints.maxWidth),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 10),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../books/presentation/books_controller.dart';
 import '../data/review_models.dart';
 import '../data/review_repository.dart';
 
@@ -59,12 +60,15 @@ class ReviewsController extends StateNotifier<ReviewsState> {
   ReviewsController({
     required ReviewRepository repository,
     required AuthController authController,
+    void Function(int bookId)? onReviewSaved,
   }) : _repository = repository,
        _authController = authController,
+       _onReviewSaved = onReviewSaved,
        super(const ReviewsState());
 
   final ReviewRepository _repository;
   final AuthController _authController;
+  final void Function(int bookId)? _onReviewSaved;
 
   Future<void> loadMyReviews({bool force = false}) async {
     if (!force && state.status == ReviewsStatus.ready) return;
@@ -126,6 +130,7 @@ class ReviewsController extends StateNotifier<ReviewsState> {
         clearBusy: true,
         clearError: true,
       );
+      _onReviewSaved?.call(saved.bookId);
       return saved;
     } on ApiException catch (error) {
       state = state.copyWith(
@@ -164,5 +169,7 @@ final reviewsControllerProvider =
       return ReviewsController(
         repository: ref.watch(reviewRepositoryProvider),
         authController: ref.watch(authControllerProvider.notifier),
+        onReviewSaved: (bookId) =>
+            ref.invalidate(bookReviewsProvider((bookId: bookId, page: 1))),
       );
     });

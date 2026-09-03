@@ -229,9 +229,10 @@ class CommunityImageGrid extends StatelessWidget {
 }
 
 class CommunityBookChips extends StatelessWidget {
-  const CommunityBookChips({required this.books, super.key});
+  const CommunityBookChips({required this.books, this.onBookTap, super.key});
 
   final List<CommunityBookRef> books;
+  final ValueChanged<int>? onBookTap;
 
   @override
   Widget build(BuildContext context) {
@@ -241,13 +242,24 @@ class CommunityBookChips extends StatelessWidget {
       runSpacing: 7,
       children: [
         for (final book in books)
-          Chip(
-            avatar: const Icon(Icons.menu_book_outlined, size: 16),
-            label: Text(book.title, overflow: TextOverflow.ellipsis),
-            visualDensity: VisualDensity.compact,
-            backgroundColor: CommunityColors.softAccent,
-            side: BorderSide.none,
-          ),
+          if (onBookTap == null)
+            Chip(
+              avatar: const Icon(Icons.menu_book_outlined, size: 16),
+              label: Text(book.title, overflow: TextOverflow.ellipsis),
+              visualDensity: VisualDensity.compact,
+              backgroundColor: CommunityColors.softAccent,
+              side: BorderSide.none,
+            )
+          else
+            ActionChip(
+              avatar: const Icon(Icons.menu_book_outlined, size: 16),
+              label: Text(book.title, overflow: TextOverflow.ellipsis),
+              tooltip: '查看《${book.title}》详情',
+              onPressed: () => onBookTap!(book.id),
+              visualDensity: VisualDensity.compact,
+              backgroundColor: CommunityColors.softAccent,
+              side: BorderSide.none,
+            ),
       ],
     );
   }

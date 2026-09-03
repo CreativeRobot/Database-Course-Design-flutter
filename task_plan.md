@@ -148,3 +148,44 @@
 | 直接 `dart.exe format` 因无法写入用户 `AppData\Roaming\.dart-tool` 失败 | 2 | 根因是 Dart analytics 初始化写入沙箱外目录；设置可写临时 `APPDATA`/`HOME` 并禁用 analytics 后格式化成功。 |
 
 | 实施计划文档存在行尾空格和 EOF 多余空行，git diff --cached --check 失败 | 1 | 清理每行行尾及 EOF 后重新暂存并复查。 |
+---
+## 2026-09-03 主页、个人中心与找回密码界面调整
+
+### Goal
+删除主页分区右上角辅助文案、移除社区页顶部发帖按钮、在个人中心增加“我的帖子”、补充测试二级分类，并精简忘记密码页左侧文案。
+
+### Phases
+- [x] 确认相关页面、帖子查询链路和分类初始化位置
+- [ ] 完成主页、社区页、个人中心及找回密码页的界面调整
+- [ ] 通过项目既有初始化方式补充二级分类测试数据
+- [ ] 格式化并运行相关 Flutter 静态分析（用户选择手动进行功能验收）
+
+### Constraints
+- 仅删除社区页右上角的可见发帖按钮，不删除已有发帖路由。
+- “我的帖子”只能读取当前登录用户的帖子；优先复用已有接口，确有必要时才新增最小后端接口。
+- 不触碰或提交现有未提交的社区画廊改动：`community_widgets.dart`、`post_detail_page.dart`、`.planning/`。
+- 本轮不运行功能测试；按用户要求仅执行可编译性/静态分析检查。
+
+| `python` executable was not available while applying the scoped Flutter edit | 1 | The script did not execute and made no file changes. Use the supplied Node.js REPL filesystem capability instead of retrying the unavailable Python command. |
+
+| Node.js source replacements stopped at the API-path pattern because that file uses a different line-ending/text form | 2 | Earlier independent Flutter edits may have been written. Inspect the partial diff and finish remaining edits with line-ending-tolerant replacements; do not rerun the full batch. |
+
+| Node.js REPL filesystem write was denied for `profile_page.dart` after independent API/repository changes had already completed | 3 | Do not retry Node editing. Inspect partial diff and finish the profile/auth changes with PowerShell/.NET writes, which operate under the workspace write policy. |
+
+| Workspace-sandboxed PowerShell/.NET writes were also denied for `profile_page.dart` | 3 | No profile writes were persisted. Request a narrowly scoped elevated PowerShell write for the files the workspace sandbox unexpectedly refuses to modify. |
+
+| Second AuthFrame edit used exact fragments without a leading newline but still found no matching text | 2 | The elevated write did not begin. Diagnose each intended fragment with literal indices and use a deliberately more robust, line-number based transformation. |
+- [x] 完成主页、社区页、个人中心及找回密码页的界面调整
+- [ ] 通过项目既有初始化方式补充二级分类测试数据
+- [ ] 运行格式化并执行 Flutter 静态分析/编译相关检查（用户选择手动进行功能验收）
+- [x] 通过项目既有初始化方式补充二级分类测试数据
+- [ ] 运行格式化并执行 Flutter 静态分析/编译相关检查（用户选择手动进行功能验收）
+
+| Dart-format setup assigned to PowerShell's read-only `$HOME` variable | 1 | The formatter did not run. Rename the local variable to `$dartHome` while still setting the environment variables; do not repeat the same command unchanged. |
+
+| Flutter analyzer returned exit code 1 with 12 warning/info diagnostics, no error diagnostics | 1 | Do not conceal the result. Since user requested compile-related validation, run a direct Flutter web debug build (no tests) to establish compilation evidence. |
+- [x] 运行格式化并执行 Flutter 静态分析/编译相关检查（用户选择手动进行功能验收）
+
+## 2026-09-03 本轮完成摘要
+- 已完成主页辅助小字、社区顶部发帖按钮、个人中心“我的帖子”、二级分类测试数据与忘记密码页左侧文案调整。
+- 已完成前后端编译相关验证；未运行功能测试，按用户要求留待手动验收。

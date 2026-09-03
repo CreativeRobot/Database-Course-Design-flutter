@@ -175,12 +175,29 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
     _lastReviewSummary = summary;
     var changed = false;
     for (final review in summary.reviews.records) {
-      if (_loadedReviewIds.add(review.id)) {
+      final existingIndex = _loadedReviews.indexWhere(
+        (loaded) => loaded.id == review.id,
+      );
+      if (existingIndex == -1) {
+        _loadedReviewIds.add(review.id);
         _loadedReviews.add(review);
+        changed = true;
+      } else if (!_sameReview(_loadedReviews[existingIndex], review)) {
+        _loadedReviews[existingIndex] = review;
         changed = true;
       }
     }
     if (changed && mounted) setState(() {});
+  }
+
+  bool _sameReview(BookReview left, BookReview right) {
+    return left.id == right.id &&
+        left.bookId == right.bookId &&
+        left.bookTitle == right.bookTitle &&
+        left.reviewerName == right.reviewerName &&
+        left.rating == right.rating &&
+        left.content == right.content &&
+        left.createTime == right.createTime;
   }
 
   @override

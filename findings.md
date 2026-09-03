@@ -58,3 +58,47 @@
 - 后端管理员帖子管理已实现并提交为 `5453e5a feat: add admin community post moderation`；`uploads/posts/` 保持未跟踪且未提交。
 - Flutter 管理端实现已落盘但尚未提交；工作区另有并行产生的社区图书详情/图片画廊改动和 `.planning/`，本轮提交必须显式暂存，不能使用 `git add .`。
 - 提交前新鲜验证已完成：相关 Flutter 回归 17/17 通过，管理员帖子页面与新增测试静态分析无问题；后端 `CommunityServiceTests` 14/14 通过。
+## 2026-09-03 主页、个人中心与找回密码界面调整
+- 当前 Flutter 工作区已有并行未提交改动：`community_widgets.dart`、`post_detail_page.dart` 与 `.planning/`；本轮不会修改或暂存它们。
+- 初步定位：主页分区在 `features/books/presentation/homepage_sections.dart`，社区页在 `features/community/presentation/community_page.dart`，个人中心在 `features/profile/presentation/profile_page.dart`。
+- 社区帖子模型与仓库位于 `features/community/data/`；后端已有完整分类管理和层级服务，需要进一步定位其运行时初始化/种子数据入口。
+- 用户要求只验证编译性，因此本轮不执行功能测试。- `CommunityRepository.listPosts` 目前仅支持关键字、图书和分页筛选，不能按当前用户过滤；“我的帖子”需要增加受登录态约束的最小查询接口或等价查询能力。
+- 现有公开路由已经包含社区、发帖和帖子详情，删除社区顶部按钮无需删除路由。
+- 数据库的课堂演示数据位于后端 `sql/02_data.sql`；将优先在该脚本补充二级分类，而不伪造前端分类。
+
+## 2026-09-04 continued investigation
+- Re-read the active plan and confirmed the user-approved scope is limited to the five requested UI/data changes; verification is limited to formatting and Flutter analysis/compilation-related checks.
+- Home sections use `_SectionShell(title, subtitle, child)`; the three current auxiliary subtitles are for 折扣与活动、发售日历、热门. Removing subtitle at the shared shell removes the requested right-aligned helper text consistently.
+- Community page has both an AppBar “发布帖子” action and a separate floating “发布” button; only the AppBar action should be removed.
+- The expected backend path was incorrectly addressed as `..\\demo`; from the Flutter app its likely sibling must be located before implementation. This failed lookup will not be retried unchanged.
+- `AuthFrame` is defined in `auth_pages.dart`, not a separate file. It currently requires eyebrow, headline, description, and bullets; make decorative left-column fields optional so ForgotPassword can supply only headline without altering login/register.
+- The backend project is a sibling of `BookStore_Flutter` at `D:\no game\Code\DatabaseHomework\demo`; its community controller is confirmed at `demo\src\main\java\com\example\demo\controller\CommunityController.java`.
+- Profile navigation derives both desktop and mobile controls from `ProfileSection.values`, so adding a posts enum value should expose it in both layouts.
+- Profile main content uses an exhaustive `switch (_section)` with only overview/orders/security; add a `posts` case and use a self-contained posts section. Existing `SingleChildScrollView` means the section should avoid nested scrolling.
+- `AuthFrame` passes its four current textual fields straight into `_EditorialPanel` in desktop and compact layouts. Update those field types to nullable and conditionally omit the eyebrow, decorative line, description, and bullet block for Forgot Password only; retain the headline.
+- Existing public feed is deliberately limited to active posts through `CommunityService.listPosts`; the service already has pagination, a `PageRequest` helper, `toPostVo`, and the repository’s admin search. A secure user-owned listing should accept user ID solely from `@RequestAttribute("userId")` and query all that user’s posts (including status 0), not reuse the public feed or accept arbitrary userId from the client.
+- The Flutter `CommunityPost` model already includes `userId`, title, timestamps, image URLs, associated books, and comment count, so the profile tab can render a compact card without new response fields.
+- Category seed table is named `category`, uses `INSERT IGNORE`, and already contains Computer Science > Database/Programming/Artificial Intelligence, Literature > Classic Literature, and Science > Popular Science. Add non-conflicting direct children using parent-name selects.
+- `CommunityPostRepository` has public `search` and admin `searchForAdmin`; add a separate `findByUser_Id` query ordered newest first for the authenticated “我的帖子” endpoint. This keeps normal users from querying other users’ posts while allowing their own hidden posts to be visible to them.
+- `CommunityService` already maps the exact response required via `toPostVo` and validates user identity through `getActiveUser`. Reuse its page validation/sorting for `listMyPosts(userId, page, size)`.
+- Client API path convention places user-specific resources under the existing domain endpoint; use `GET /api/community/posts/mine` and add it as `ApiPaths.myCommunityPosts`.
+- Profile page imports have no community dependencies yet. Add `AppRoutePaths`, `CommunityRepository`/`CommunityPost`, and `CommunityColors` or render the lightweight cards in the existing profile visual palette; navigation can directly call `context.go(AppRoutePaths.communityPost(post.id))`.
+- Existing `community_api_paths_test.dart` and `community_pages_test.dart` could be extended, but the user explicitly requested only compilation/static analysis rather than behavior validation; no new functional tests will be added or run in this pass.
+- For the password panel, nulling just text fields is insufficient because the existing decorative rule remains; implement a clear `headlineOnly` option that removes eyebrow, rule, description, bullet spacing, including in compact layout.
+- Exact profile section label/icon switches are at the end of `profile_page.dart`; both need a posts case (`我的帖子`, an article/forum icon) to retain exhaustive-switch compilation.
+- `CommunityPostCard` is an existing reusable card that already shows title, content, images, associated books, timestamp, and comment count and only needs post/baseUrl/onTap. Reuse it from the profile tab rather than duplicating the community presentation.
+- `communityRepositoryProvider` is declared in `community_controller.dart`, so profile can define a local `FutureProvider.autoDispose` backed by that provider and `CommunityRepository.listMyPosts`.
+- Elevated profile write succeeded. Auth page is still unchanged because the forgot-password call-site uses a different formatting shape than the expected text; next inspect the precise block rather than retrying the same replacement.
+- The auth page has mixed LF/CRLF line endings. A per-fragment mixed-EOL replacement helper was necessary; it successfully added `headlineOnly` and suppresses the Forgot Password left-panel eyebrow, decoration, description, and bullet list while retaining the large headline.
+- Profile now includes a `我的帖子` navigation item and loads authenticated posts via a local Riverpod provider; it uses the existing `CommunityPostCard`, allows opening post detail, and labels a hidden post as self-visible only.
+- Frontend endpoint contract is `GET /api/community/posts/mine?page=&size=`; remaining implementation is the matching authenticated backend endpoint and additional category seeds.
+- Backend implementation added `GET /api/community/posts/mine`, obtains the account from the authentication request attribute, validates it through `getActiveUser`, and uses a user-filtered paginated repository query. It is placed before the dynamic `{postId}` mapping.
+- Three extra direct children were added to existing categories for test data: Computer Science > Web Development, Literature > Essays, and Science > Astronomy.
+- Scoped `git diff --check` emitted no whitespace errors for either Flutter or backend files. It did emit existing line-ending conversion warnings only; these are not whitespace-error findings.
+- `dart format` completed on all six changed Dart files and rewrote three.
+- Backend compilation check passed: `mvn -DskipTests compile` compiled 219 Java source files and reported `BUILD SUCCESS`.
+- Flutter analysis of the six changed Dart files reported 12 existing-style/deprecation/unused-declaration issues and exited non-zero, but it reported no Dart `error` diagnostics. The two warning-level diagnostics (`auth_repository.dart` unused import and `_BrandMark` unused declaration) and the remaining info-level style/deprecation diagnostics pre-existed in these long-standing files; no new compile error was reported.
+- To obtain direct Flutter compilation evidence despite the analyzer's warning exit, run `flutter build web --debug --no-pub` next. This is a compile-only build, not a behavior test.
+- Flutter web compilation check succeeded: `flutter build web --debug --no-pub` compiled `lib/main.dart` and produced `build/web` successfully. No automated behavior tests were run.
+- Final scoped whitespace checks for Flutter and backend both exited successfully; only Git line-ending conversion warnings were emitted.
+- Existing parallel Flutter changes remain untouched: `lib/features/community/presentation/community_widgets.dart`, `lib/features/community/presentation/post_detail_page.dart`, and `.planning/`. Backend also has pre-existing/unrelated untracked `uploads/posts/`, which was not modified.

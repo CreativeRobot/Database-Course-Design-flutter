@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/router/app_route_paths.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/media_url.dart';
 import '../../../data/models/profile/user_address.dart';
@@ -12,6 +14,9 @@ import '../../../data/models/auth/security_question.dart';
 import '../../../data/models/auth/security_question_catalog.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
+import '../../community/data/community_models.dart';
+import '../../community/presentation/community_controller.dart';
+import '../../community/presentation/community_widgets.dart';
 import '../../orders/data/order_models.dart';
 import '../../orders/presentation/orders_controller.dart';
 import '../../orders/presentation/orders_page.dart';
@@ -25,7 +30,15 @@ String addressFieldValue({String? existing, String? fallback}) {
   return fallback?.trim() ?? '';
 }
 
-enum ProfileSection { overview, orders, security }
+final myCommunityPostsProvider =
+    FutureProvider.autoDispose<List<CommunityPost>>((ref) async {
+      final result = await ref
+          .watch(communityRepositoryProvider)
+          .listMyPosts(size: 50);
+      return result.records;
+    });
+
+enum ProfileSection { overview, orders, posts, security }
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -157,6 +170,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               onRetryShippedOrders: () => ref.invalidate(shippedOrdersProvider),
             ),
             ProfileSection.orders => OrdersContent(embedded: true),
+            ProfileSection.posts => const _MyPostsSection(),
             ProfileSection.security => _SecuritySection(
               submitting: state.submitting,
               onChangePassword: _changePassword,
@@ -324,9 +338,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       builder: (_) => _SecurityQuestionsDialog(),
     );
     if (result == null || !mounted) return;
-    final success = await ref.read(profileControllerProvider.notifier).updateSecurityQuestions(questions: result);
+    final success = await ref
+        .read(profileControllerProvider.notifier)
+        .updateSecurityQuestions(questions: result);
     if (success && mounted) _showSuccess('密保问题已保存');
   }
+
   Future<void> _logout() async {
     await ref.read(authControllerProvider.notifier).logout();
     if (mounted) {
@@ -1370,6 +1387,135 @@ class _ShippingOrdersPanel extends StatelessWidget {
   );
 }
 
+class _MyPostsSection extends ConsumerWidget {
+  const _MyPostsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final posts = ref.watch(myCommunityPostsProvider);
+    final baseUrl = ref.watch(appConfigProvider).baseUrl;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '我的帖子',
+          style: TextStyle(
+            color: ProfileColors.ink,
+            fontFamily: 'serif',
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          '查看你在图书社区发布的全部讨论。',
+          style: TextStyle(color: ProfileColors.muted),
+        ),
+        const SizedBox(height: 24),
+        posts.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => _MyPostsFeedback(
+            icon: Icons.cloud_off_outlined,
+            message: error is ApiException && error.message.isNotEmpty
+                ? error.message
+                : '我的帖子暂时无法加载',
+            actionLabel: '重新加载',
+            onAction: () => ref.invalidate(myCommunityPostsProvider),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return _MyPostsFeedback(
+                icon: Icons.forum_outlined,
+                message: '你还没有发布过帖子，去社区分享一本喜欢的书吧。',
+                actionLabel: '前往社区',
+                onAction: () => context.go(AppRoutePaths.community),
+              );
+            }
+            return Column(
+              children: [
+                for (final post in items) ...[
+                  if (post.status != 1)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF5E7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        '该帖子已被屏蔽，仅你自己可见。',
+                        style: TextStyle(color: ProfileColors.muted),
+                      ),
+                    ),
+                  CommunityPostCard(
+                    post: post,
+                    baseUrl: baseUrl,
+                    onTap: () =>
+                        context.go(AppRoutePaths.communityPost(post.id)),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _MyPostsFeedback extends StatelessWidget {
+  const _MyPostsFeedback({
+    required this.icon,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: ProfileColors.line),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: ProfileColors.muted, size: 34),
+          const SizedBox(height: 14),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: ProfileColors.muted),
+          ),
+          const SizedBox(height: 18),
+          OutlinedButton.icon(
+            onPressed: onAction,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SecuritySection extends StatefulWidget {
   const _SecuritySection({
     required this.submitting,
@@ -1440,10 +1586,29 @@ class _SecuritySectionState extends State<_SecuritySection> {
         const SizedBox(height: 24),
         Row(
           children: [
-            Icon(widget.securityConfigured ? Icons.verified_user_outlined : Icons.warning_amber_outlined, size: 20),
+            Icon(
+              widget.securityConfigured
+                  ? Icons.verified_user_outlined
+                  : Icons.warning_amber_outlined,
+              size: 20,
+            ),
             const SizedBox(width: 8),
-            Expanded(child: Text(widget.securityConfigured ? '已设置 3 个密保问题' : '尚未设置密保问题；未设置时无法修改或找回密码', style: const TextStyle(color: ProfileColors.muted, fontSize: 13))),
-            OutlinedButton.icon(onPressed: widget.onManageSecurityQuestions, icon: const Icon(Icons.edit_outlined, size: 17), label: Text(widget.securityConfigured ? '修改密保' : '设置密保')),
+            Expanded(
+              child: Text(
+                widget.securityConfigured
+                    ? '已设置 3 个密保问题'
+                    : '尚未设置密保问题；未设置时无法修改或找回密码',
+                style: const TextStyle(
+                  color: ProfileColors.muted,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: widget.onManageSecurityQuestions,
+              icon: const Icon(Icons.edit_outlined, size: 17),
+              label: Text(widget.securityConfigured ? '修改密保' : '设置密保'),
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -2113,6 +2278,7 @@ String _sectionLabel(ProfileSection section) {
   return switch (section) {
     ProfileSection.overview => '账户概览',
     ProfileSection.orders => '我的订单',
+    ProfileSection.posts => '我的帖子',
     ProfileSection.security => '账户安全',
   };
 }
@@ -2121,6 +2287,7 @@ IconData _sectionIcon(ProfileSection section) {
   return switch (section) {
     ProfileSection.overview => Icons.dashboard_outlined,
     ProfileSection.orders => Icons.receipt_long_outlined,
+    ProfileSection.posts => Icons.forum_outlined,
     ProfileSection.security => Icons.lock_outline_rounded,
   };
 }
@@ -2146,7 +2313,8 @@ class _SecurityQuestionsDialog extends StatefulWidget {
 
   final List<SecurityQuestion> initialQuestions;
   @override
-  State<_SecurityQuestionsDialog> createState() => _SecurityQuestionsDialogState();
+  State<_SecurityQuestionsDialog> createState() =>
+      _SecurityQuestionsDialogState();
 }
 
 class _SecurityQuestionsDialogState extends State<_SecurityQuestionsDialog> {
@@ -2160,27 +2328,72 @@ class _SecurityQuestionsDialogState extends State<_SecurityQuestionsDialog> {
         ? widget.initialQuestions.map((item) => item.key).toList()
         : ['Q1', 'Q2', 'Q3'];
   }
+
   final _answers = List.generate(3, (_) => TextEditingController());
 
   @override
-  void dispose() { for (final controller in _answers) controller.dispose(); super.dispose(); }
+  void dispose() {
+    for (final controller in _answers) controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('设置密保问题'),
-    content: SizedBox(width: 520, child: Form(key: _formKey, child: SingleChildScrollView(child: Column(children: [
-      for (var index = 0; index < 3; index++) ...[
-        DropdownButtonFormField<String>(value: _keys[index], decoration: InputDecoration(labelText: '问题 ${index + 1}'), items: securityQuestionCatalog.map((q) => DropdownMenuItem(value: q.key, child: Text(q.question))).toList(), onChanged: (value) => setState(() => _keys[index] = value!), validator: (v) => v == null ? '请选择问题' : null),
-        const SizedBox(height: 10),
-        TextFormField(controller: _answers[index], decoration: const InputDecoration(labelText: '答案'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null),
-        const SizedBox(height: 14),
-      ],
-    ]))),),
-    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')), FilledButton(onPressed: () { if (!_formKey.currentState!.validate() || _keys.toSet().length != 3) return; Navigator.pop(context, [for (var i = 0; i < 3; i++) SecurityAnswer(questionKey: _keys[i], answer: _answers[i].text.trim())]); }, child: const Text('保存'))],
+    content: SizedBox(
+      width: 520,
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              for (var index = 0; index < 3; index++) ...[
+                DropdownButtonFormField<String>(
+                  value: _keys[index],
+                  decoration: InputDecoration(labelText: '问题 ${index + 1}'),
+                  items: securityQuestionCatalog
+                      .map(
+                        (q) => DropdownMenuItem(
+                          value: q.key,
+                          child: Text(q.question),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() => _keys[index] = value!),
+                  validator: (v) => v == null ? '请选择问题' : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _answers[index],
+                  decoration: const InputDecoration(labelText: '答案'),
+                  validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null,
+                ),
+                const SizedBox(height: 14),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('取消'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (!_formKey.currentState!.validate() || _keys.toSet().length != 3)
+            return;
+          Navigator.pop(context, [
+            for (var i = 0; i < 3; i++)
+              SecurityAnswer(
+                questionKey: _keys[i],
+                answer: _answers[i].text.trim(),
+              ),
+          ]);
+        },
+        child: const Text('保存'),
+      ),
+    ],
   );
 }
-
-
-
-
-

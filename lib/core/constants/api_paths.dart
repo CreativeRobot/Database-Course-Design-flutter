@@ -46,6 +46,7 @@ abstract final class ApiPaths {
   static String refund(int refundId) => '$refunds/$refundId';
 
   static const communityPosts = '/api/community/posts';
+  static const myCommunityPosts = '$communityPosts/mine';
   static String communityPost(int postId) => '$communityPosts/$postId';
   static String communityComments(int postId) =>
       '${communityPost(postId)}/comments';

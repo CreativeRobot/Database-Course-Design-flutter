@@ -82,14 +82,6 @@ class _CommunityPageState extends ConsumerState<CommunityPage> {
           onPressed: () => context.go(AppRoutePaths.books),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        actions: [
-          TextButton.icon(
-            onPressed: _openEditor,
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('发布帖子'),
-          ),
-          const SizedBox(width: 12),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openEditor,

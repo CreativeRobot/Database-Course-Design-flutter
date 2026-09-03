@@ -16,8 +16,6 @@ import '../../../data/models/auth/security_question.dart';
 import '../../../data/models/auth/security_question_catalog.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 
-
-
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -284,16 +282,24 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       setState(() => _error = '请输入用户名');
       return;
     }
-    setState(() { _loadingQuestions = true; _error = null; });
+    setState(() {
+      _loadingQuestions = true;
+      _error = null;
+    });
     try {
-      final questions = await ref.read(authRepositoryProvider).fetchSecurityQuestions(username);
+      final questions = await ref
+          .read(authRepositoryProvider)
+          .fetchSecurityQuestions(username);
       if (!mounted) return;
       setState(() {
         _questions = questions;
         _selectedKeys = [null, null];
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
+      if (mounted)
+        setState(
+          () => _error = error.toString().replaceFirst('Exception: ', ''),
+        );
     } finally {
       if (mounted) setState(() => _loadingQuestions = false);
     }
@@ -305,23 +311,36 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       setState(() => _error = '请先获取密保问题，并回答两个不同的问题');
       return;
     }
-    setState(() { _submitting = true; _error = null; });
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     try {
-      await ref.read(authRepositoryProvider).forgotPassword(
-        username: _usernameController.text.trim(),
-        answers: [
-          for (var index = 0; index < 2; index++)
-            SecurityAnswer(questionKey: _selectedKeys[index]!, answer: _answerControllers[index].text.trim()),
-        ],
-        newPassword: _newPasswordController.text,
-        confirmPassword: _confirmPasswordController.text,
-      );
+      await ref
+          .read(authRepositoryProvider)
+          .forgotPassword(
+            username: _usernameController.text.trim(),
+            answers: [
+              for (var index = 0; index < 2; index++)
+                SecurityAnswer(
+                  questionKey: _selectedKeys[index]!,
+                  answer: _answerControllers[index].text.trim(),
+                ),
+            ],
+            newPassword: _newPasswordController.text,
+            confirmPassword: _confirmPasswordController.text,
+          );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('密码重置成功，请使用新密码登录')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('密码重置成功，请使用新密码登录')));
         context.go(AppRoutePaths.login);
       }
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
+      if (mounted)
+        setState(
+          () => _error = error.toString().replaceFirst('Exception: ', ''),
+        );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -332,36 +351,95 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     return AuthFrame(
       eyebrow: 'BOOKSTORE  ·  ACCOUNT RECOVERY',
       headline: '通过密保问题找回密码',
+      headlineOnly: true,
       description: '回答已设置的两个密保问题，验证身份后即可设置新密码。',
       bullets: const ['答案仅用于身份验证', '每次需要回答两个不同的问题', '没有密保记录的账户无法找回密码'],
       card: Form(
         key: _formKey,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: '用户名'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入用户名' : null),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(onPressed: _loadingQuestions ? null : _loadQuestions, icon: _loadingQuestions ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.quiz_outlined), label: const Text('获取密保问题')),
-          if (_questions.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            for (var index = 0; index < 2; index++) ...[
-              DropdownButtonFormField<String>(value: _selectedKeys[index], decoration: InputDecoration(labelText: '密保问题 ${index + 1}'), items: _questions.map((q) => DropdownMenuItem(value: q.key, child: Text(q.question))).toList(), onChanged: (value) => setState(() => _selectedKeys[index] = value), validator: (v) => v == null ? '请选择问题' : null),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _usernameController,
+              decoration: const InputDecoration(labelText: '用户名'),
+              validator: (v) => (v ?? '').trim().isEmpty ? '请输入用户名' : null,
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: _loadingQuestions ? null : _loadQuestions,
+              icon: _loadingQuestions
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.quiz_outlined),
+              label: const Text('获取密保问题'),
+            ),
+            if (_questions.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              for (var index = 0; index < 2; index++) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedKeys[index],
+                  decoration: InputDecoration(labelText: '密保问题 ${index + 1}'),
+                  items: _questions
+                      .map(
+                        (q) => DropdownMenuItem(
+                          value: q.key,
+                          child: Text(q.question),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => _selectedKeys[index] = value),
+                  validator: (v) => v == null ? '请选择问题' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _answerControllers[index],
+                  decoration: const InputDecoration(labelText: '密保答案'),
+                  validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null,
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextFormField(
+                controller: _newPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: '新密码'),
+                validator: (v) => (v ?? '').length < 6 ? '新密码至少需要 6 个字符' : null,
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _answerControllers[index], decoration: const InputDecoration(labelText: '密保答案'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null),
-              const SizedBox(height: 12),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: '确认新密码'),
+                validator: (v) =>
+                    v != _newPasswordController.text ? '两次输入的新密码不一致' : null,
+              ),
+              const SizedBox(height: 18),
+              AuthPrimaryButton(
+                label: _submitting ? '正在重置' : '重置密码',
+                icon: Icons.lock_reset_rounded,
+                loading: _submitting,
+                onPressed: _submit,
+              ),
             ],
-            TextFormField(controller: _newPasswordController, obscureText: true, decoration: const InputDecoration(labelText: '新密码'), validator: (v) => (v ?? '').length < 6 ? '新密码至少需要 6 个字符' : null),
-            const SizedBox(height: 12),
-            TextFormField(controller: _confirmPasswordController, obscureText: true, decoration: const InputDecoration(labelText: '确认新密码'), validator: (v) => v != _newPasswordController.text ? '两次输入的新密码不一致' : null),
-            const SizedBox(height: 18),
-            AuthPrimaryButton(label: _submitting ? '正在重置' : '重置密码', icon: Icons.lock_reset_rounded, loading: _submitting, onPressed: _submit),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              AuthErrorBanner(message: _error!),
+            ],
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => context.go(AppRoutePaths.login),
+              child: const Text('返回登录'),
+            ),
           ],
-          if (_error != null) ...[const SizedBox(height: 12), AuthErrorBanner(message: _error!)],
-          const SizedBox(height: 16),
-          TextButton(onPressed: () => context.go(AppRoutePaths.login), child: const Text('返回登录')),
-        ]),
+        ),
       ),
     );
   }
 }
+
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
@@ -377,7 +455,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _securityAnswerControllers = List.generate(3, (_) => TextEditingController());
+  final _securityAnswerControllers = List.generate(
+    3,
+    (_) => TextEditingController(),
+  );
   final _securityQuestionKeys = ['Q1', 'Q2', 'Q3'];
   final _captchaController = TextEditingController();
   Captcha? _captcha;
@@ -548,16 +629,38 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 },
               ),
               const SizedBox(height: 18),
-              const Text('设置三个密保问题', style: TextStyle(fontWeight: FontWeight.w800)),
+              const Text(
+                '设置三个密保问题',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
               const SizedBox(height: 8),
-              const Text('找回密码时需要答对其中两个，请选择自己能记住答案的问题。', style: TextStyle(color: AuthColors.muted, fontSize: 12)),
+              const Text(
+                '找回密码时需要答对其中两个，请选择自己能记住答案的问题。',
+                style: TextStyle(color: AuthColors.muted, fontSize: 12),
+              ),
               for (var index = 0; index < 3; index++) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _securityQuestionKeys[index],
                   decoration: InputDecoration(labelText: '密保问题 ${index + 1}'),
-                  items: securityQuestionCatalog.where((item) => !_securityQuestionKeys.asMap().entries.any((entry) => entry.key != index && entry.value == item.key)).map((item) => DropdownMenuItem(value: item.key, child: Text(item.question))).toList(),
-                  onChanged: (value) => setState(() => _securityQuestionKeys[index] = value ?? _securityQuestionKeys[index]),
+                  items: securityQuestionCatalog
+                      .where(
+                        (item) => !_securityQuestionKeys.asMap().entries.any(
+                          (entry) =>
+                              entry.key != index && entry.value == item.key,
+                        ),
+                      )
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item.key,
+                          child: Text(item.question),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(
+                    () => _securityQuestionKeys[index] =
+                        value ?? _securityQuestionKeys[index],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 AuthField(
@@ -565,7 +668,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   label: '密保答案 ${index + 1}',
                   hintText: '请输入答案',
                   prefixIcon: Icons.shield_outlined,
-                  validator: (value) => (value ?? '').trim().isEmpty ? '请输入密保答案' : null,
+                  validator: (value) =>
+                      (value ?? '').trim().isEmpty ? '请输入密保答案' : null,
                 ),
               ],
               const SizedBox(height: 16),
@@ -667,6 +771,7 @@ class AuthFrame extends StatelessWidget {
     required this.headline,
     required this.description,
     required this.bullets,
+    this.headlineOnly = false,
     required this.card,
     super.key,
   });
@@ -675,6 +780,7 @@ class AuthFrame extends StatelessWidget {
   final String headline;
   final String description;
   final List<String> bullets;
+  final bool headlineOnly;
   final Widget card;
 
   @override
@@ -711,6 +817,7 @@ class AuthFrame extends StatelessWidget {
                               headline: headline,
                               description: description,
                               bullets: bullets,
+                              headlineOnly: headlineOnly,
                             ),
                           ),
                           const SizedBox(width: 72),
@@ -727,6 +834,7 @@ class AuthFrame extends StatelessWidget {
                         headline: headline,
                         description: description,
                         bullets: bullets,
+                        headlineOnly: headlineOnly,
                         compact: true,
                       ),
                     ],
@@ -807,6 +915,7 @@ class _EditorialPanel extends StatelessWidget {
     required this.headline,
     required this.description,
     required this.bullets,
+    required this.headlineOnly,
     this.compact = false,
   });
 
@@ -814,6 +923,7 @@ class _EditorialPanel extends StatelessWidget {
   final String headline;
   final String description;
   final List<String> bullets;
+  final bool headlineOnly;
   final bool compact;
 
   @override
@@ -821,25 +931,27 @@ class _EditorialPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          eyebrow,
-          style: const TextStyle(
-            color: AuthColors.muted,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.7,
-          ),
-        ),
-        SizedBox(height: compact ? 18 : 32),
-        if (!compact)
-          SizedBox(
-            height: 92,
-            child: CustomPaint(
-              painter: _EditorialLinePainter(),
-              child: const SizedBox.expand(),
+        if (!headlineOnly) ...[
+          Text(
+            eyebrow,
+            style: const TextStyle(
+              color: AuthColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.7,
             ),
           ),
-        SizedBox(height: compact ? 0 : 40),
+          SizedBox(height: compact ? 18 : 32),
+          if (!compact)
+            SizedBox(
+              height: 92,
+              child: CustomPaint(
+                painter: _EditorialLinePainter(),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          SizedBox(height: compact ? 0 : 40),
+        ],
         Text(
           headline,
           style: TextStyle(
@@ -850,35 +962,40 @@ class _EditorialPanel extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          description,
-          style: TextStyle(
-            color: AuthColors.muted,
-            fontSize: compact ? 15 : 18,
-            height: 1.8,
-          ),
-        ),
-        const SizedBox(height: 32),
-        ...bullets.map(
-          (bullet) => Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.check_circle_outline_rounded,
-                  size: 18,
-                  color: AuthColors.muted,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  bullet,
-                  style: const TextStyle(color: AuthColors.muted, fontSize: 14),
-                ),
-              ],
+        if (!headlineOnly) ...[
+          const SizedBox(height: 24),
+          Text(
+            description,
+            style: TextStyle(
+              color: AuthColors.muted,
+              fontSize: compact ? 15 : 18,
+              height: 1.8,
             ),
           ),
-        ),
+          const SizedBox(height: 32),
+          ...bullets.map(
+            (bullet) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 18,
+                    color: AuthColors.muted,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    bullet,
+                    style: const TextStyle(
+                      color: AuthColors.muted,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1393,6 +1510,3 @@ abstract final class AuthColors {
   static const placeholder = Color(0xFFA7A49D);
   static const line = Color(0xFFE5E3DE);
 }
-
-
-

@@ -124,5 +124,11 @@ void main() {
     expect(adminOverviewSource, contains('CustomPaint('));
     expect(adminOverviewSource, contains("'售出数量'"));
     expect(adminOverviewSource, contains("'销售额'"));
+    expect(adminOverviewSource, contains("'数量：本'"));
+    expect(adminOverviewSource, contains("'金额：元'"));
+    expect(
+      adminOverviewSource,
+      contains('crossAxisAlignment: CrossAxisAlignment.stretch'),
+    );
   });
 }

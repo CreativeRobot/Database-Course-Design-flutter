@@ -81,3 +81,27 @@
 - 后端提交后新鲜专项验证：`mvn -Dtest=CommunityServiceTests test` 共 14 项，0 failures、0 errors，`BUILD SUCCESS`。
 
 - 首次暂存后 git diff --cached --check 发现实施计划 1 处行尾空格和 EOF 多余空行，已清理并准备重新检查。
+## 2026-09-03 主页、个人中心与找回密码界面调整
+- 用户已确认方案：去除主页分区辅助小字、移除社区顶部发帖按钮、增加个人中心“我的帖子”、补充二级分类、精简忘记密码页左侧文案。
+- 用户明确选择由其手动进行功能正确性验收；本轮仅执行代码可编译性/静态分析检查。
+
+## 2026-09-04 continued
+- Re-oriented from planning files and located front-end targets. Backend lookup with an incorrect one-level relative path failed; next use a repository-root search / corrected sibling path.
+- Confirmed exact homepage/community/auth targets and correct backend project location. Next inspect the complete profile and backend/repository APIs before coding the “我的帖子” feature.
+- Inspected profile content switch and AuthFrame layout. The next implementation decision is the authenticated backend endpoint and its existing pagination response shape.
+- Confirmed secure “my posts” endpoint design and usable client post model. Implementation can now proceed without a behavior-test suite because the user expressly limited verification to compilation/static analysis.
+- Finalized the data-flow design for My Posts and identified the minimal backend additions (controller, service, repository) plus client API/repository/provider/UI work.
+- Completed source inspection needed to edit all five requirements. Starting implementation now; scope avoids parallel changes in `community_widgets.dart` and `post_detail_page.dart`.
+- Identified exact profile label/icon switches and reusable post card. Ready to apply all Flutter-side changes in a single scoped edit.
+- First implementation attempt used an unavailable `python` executable; because PowerShell failed before launching the script, no code was written. Logged the error and will switch to Node.js filesystem editing rather than repeat the same command.
+- Node.js editing began successfully but stopped at the API-path replacement due to a line-ending/text mismatch. Earlier homepage and community-page replacements may already be persisted; inspect and apply only the unfinished operations with tolerant matching.
+- The line-ending-tolerant Node pass applied API-path and community repository changes, then encountered a filesystem permission error at profile editing. No profile/auth edits were applied by that pass; switch to PowerShell/.NET writes for remaining files.
+- The fallback PowerShell writer hit the same access-denied condition for `profile_page.dart`; its exceptions were non-terminating, so no profile changes were committed. Three attempts have confirmed a workspace sandbox write block, so the next step requires a narrowly scoped elevated write rather than repeating it in-sandbox.
+- Elevated write access was granted and profile-page changes were applied successfully after the workspace sandbox denied direct writes.
+- The first elevated AuthFrame edit stopped before writing because the Forgot Password call-site text differs from the previously observed exact pattern. No auth-page changes were written by that attempt; inspect the local block and apply a line-targeted replacement.
+- A second auth edit did not write any changes because its first literal lookup still returned no match. The file has been re-inspected; next diagnose literal fragment indices and use a more robust transformation, not the same exact replacement helper.
+- Completed all Flutter UI/source changes. Next write backend controller/service/repository support and test category data in the sibling demo project using elevated access.
+- Implemented backend endpoint and seed data, then reviewed scoped diffs. Next run Dart formatting followed by Flutter static analysis/build-related verification and Maven compile only; no functional tests will run per the user request.
+- The first formatter command did not start because PowerShell treats `$HOME` as read-only. The command made no source changes; rerun it with a differently named local variable.
+- Formatting succeeded. Maven compile succeeded. Flutter analyze produced no error diagnostics but exited 1 due 12 pre-existing warning/info diagnostics in auth/profile files. Proceeding with a Flutter web debug build to verify actual compilation, still without running tests.
+- Verification complete: Dart formatting completed, Maven compilation passed, Flutter analyzer reported only existing warning/info diagnostics (no errors), and Flutter web debug build passed. No behavior tests were run per user instruction.

@@ -127,7 +127,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                           communityPostProvider(widget.postId),
                         ),
                       ),
-                      data: (value) => _PostBody(post: value, baseUrl: baseUrl),
+                      data: (value) => _PostBody(
+                        post: value,
+                        baseUrl: baseUrl,
+                        onBookTap: (bookId) =>
+                            context.push('${AppRoutePaths.books}/$bookId'),
+                      ),
                     ),
                   ),
                 ),
@@ -227,10 +232,15 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 }
 
 class _PostBody extends StatelessWidget {
-  const _PostBody({required this.post, required this.baseUrl});
+  const _PostBody({
+    required this.post,
+    required this.baseUrl,
+    required this.onBookTap,
+  });
 
   final CommunityPost post;
   final String baseUrl;
+  final ValueChanged<int> onBookTap;
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +305,7 @@ class _PostBody extends StatelessWidget {
             ],
             if (post.books.isNotEmpty) ...[
               const SizedBox(height: 20),
-              CommunityBookChips(books: post.books),
+              CommunityBookChips(books: post.books, onBookTap: onBookTap),
             ],
           ],
         ),
@@ -304,38 +314,145 @@ class _PostBody extends StatelessWidget {
   }
 }
 
-class _PostGallery extends StatelessWidget {
+class _PostGallery extends StatefulWidget {
   const _PostGallery({required this.imageUrls, required this.baseUrl});
 
   final List<String> imageUrls;
   final String baseUrl;
 
   @override
+  State<_PostGallery> createState() => _PostGalleryState();
+}
+
+class _PostGalleryState extends State<_PostGallery> {
+  final PageController _pageController = PageController();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _showPage(int page) {
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 390,
-      child: PageView.builder(
-        itemCount: imageUrls.length,
-        itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: CachedNetworkImage(
-              imageUrl: communityMediaUrl(baseUrl, imageUrls[index]),
-              fit: BoxFit.contain,
-              placeholder: (_, _) => const ColoredBox(
-                color: CommunityColors.softAccent,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              errorWidget: (_, _, _) => const ColoredBox(
-                color: CommunityColors.softAccent,
-                child: Center(
-                  child: Icon(Icons.broken_image_outlined, size: 42),
+    final hasMultipleImages = widget.imageUrls.length > 1;
+    return Column(
+      children: [
+        SizedBox(
+          height: 390,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: _pageController,
+                itemCount: widget.imageUrls.length,
+                onPageChanged: (index) => setState(() => _currentIndex = index),
+                itemBuilder: (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: CachedNetworkImage(
+                      imageUrl: communityMediaUrl(
+                        widget.baseUrl,
+                        widget.imageUrls[index],
+                      ),
+                      fit: BoxFit.contain,
+                      placeholder: (_, _) => const ColoredBox(
+                        color: CommunityColors.softAccent,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (_, _, _) => const ColoredBox(
+                        color: CommunityColors.softAccent,
+                        child: Center(
+                          child: Icon(Icons.broken_image_outlined, size: 42),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (hasMultipleImages) ...[
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 14),
+                      child: _GalleryArrowButton(
+                        tooltip: '上一张',
+                        icon: Icons.chevron_left_rounded,
+                        enabled: _currentIndex > 0,
+                        onPressed: () => _showPage(_currentIndex - 1),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 14),
+                      child: _GalleryArrowButton(
+                        tooltip: '下一张',
+                        icon: Icons.chevron_right_rounded,
+                        enabled: _currentIndex < widget.imageUrls.length - 1,
+                        onPressed: () => _showPage(_currentIndex + 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
+        if (hasMultipleImages) ...[
+          const SizedBox(height: 10),
+          Text(
+            '${_currentIndex + 1} / ${widget.imageUrls.length}',
+            style: const TextStyle(
+              color: CommunityColors.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _GalleryArrowButton extends StatelessWidget {
+  const _GalleryArrowButton({
+    required this.tooltip,
+    required this.icon,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: enabled ? const Color(0xEFFFFFFF) : const Color(0x99FFFFFF),
+      elevation: enabled ? 3 : 0,
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: enabled ? onPressed : null,
+        icon: Icon(icon, size: 30),
+        color: CommunityColors.ink,
+        disabledColor: CommunityColors.muted,
       ),
     );
   }

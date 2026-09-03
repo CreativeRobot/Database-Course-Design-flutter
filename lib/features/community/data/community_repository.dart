@@ -27,6 +27,18 @@ class CommunityRepository {
     return response.data;
   }
 
+  Future<PageResponse<CommunityPost>> listMyPosts({
+    int page = 1,
+    int size = 50,
+  }) async {
+    final response = await _apiClient.get<PageResponse<CommunityPost>>(
+      ApiPaths.myCommunityPosts,
+      queryParameters: {'page': page, 'size': size},
+      parser: communityPostPage,
+    );
+    return response.data;
+  }
+
   Future<CommunityPost> getPost(int postId) async =>
       (await _apiClient.get<CommunityPost>(
         ApiPaths.communityPost(postId),

@@ -169,7 +169,6 @@ class _PromotionOffersState extends State<_PromotionOffers> {
     final offers = _offerCount;
     return _SectionShell(
       title: '折扣与活动',
-      subtitle: '限时直降与精选组合优惠，每次为你推荐一个活动',
       child: SizedBox(
         height: 316,
         child: Stack(
@@ -596,10 +595,9 @@ class _ReleaseCalendarState extends State<_ReleaseCalendar> {
   void _scrollBy(double distance) {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
-    final target = (position.pixels + distance).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    ).toDouble();
+    final target = (position.pixels + distance)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
     _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 280),
@@ -609,14 +607,13 @@ class _ReleaseCalendarState extends State<_ReleaseCalendar> {
 
   @override
   Widget build(BuildContext context) {
-    final canScrollBack = _scrollController.hasClients &&
-        _scrollController.offset > 0;
+    final canScrollBack =
+        _scrollController.hasClients && _scrollController.offset > 0;
     final canScrollForward = _scrollController.hasClients
         ? _scrollController.offset < _scrollController.position.maxScrollExtent
         : widget.books.length > 1;
     return _SectionShell(
       title: '发售日历',
-      subtitle: '提前收藏下一本即将发售的书',
       child: SizedBox(
         height: 190,
         child: Row(
@@ -653,7 +650,10 @@ class _ReleaseCalendarState extends State<_ReleaseCalendar> {
                           SizedBox(
                             width: 92,
                             child: CommerceCover(
-                              url: commerceImageUrl(widget.baseUrl, book.coverUrl),
+                              url: commerceImageUrl(
+                                widget.baseUrl,
+                                book.coverUrl,
+                              ),
                               width: 92,
                             ),
                           ),
@@ -675,7 +675,9 @@ class _ReleaseCalendarState extends State<_ReleaseCalendar> {
                                   book.title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
@@ -761,7 +763,6 @@ class _HotRankings extends StatelessWidget {
     ];
     return _SectionShell(
       title: '热门',
-      subtitle: '每周更新的读者榜单',
       child: DefaultTabController(
         length: tabs.length,
         child: Column(
@@ -869,13 +870,8 @@ class _RankingList extends StatelessWidget {
 }
 
 class _SectionShell extends StatelessWidget {
-  const _SectionShell({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
+  const _SectionShell({required this.title, required this.child});
   final String title;
-  final String subtitle;
   final Widget child;
 
   @override
@@ -883,24 +879,13 @@ class _SectionShell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'serif',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            Text(
-              subtitle,
-              style: const TextStyle(color: CommerceColors.muted, fontSize: 12),
-            ),
-          ],
+        Text(
+          title,
+          style: const TextStyle(
+            fontFamily: 'serif',
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 16),
         child,
