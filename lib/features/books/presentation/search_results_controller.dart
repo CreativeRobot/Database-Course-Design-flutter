@@ -114,8 +114,16 @@ class SearchResultsState {
 }
 
 class SearchResultsController extends StateNotifier<SearchResultsState> {
-  SearchResultsController(this._repository, {String initialKeyword = ''})
-    : super(SearchResultsState(keyword: initialKeyword.trim()));
+  SearchResultsController(
+    this._repository, {
+    String initialKeyword = '',
+    int? initialCategoryId,
+  }) : super(
+         SearchResultsState(
+           keyword: initialKeyword.trim(),
+           categoryId: initialCategoryId,
+         ),
+       );
 
   final BookRepository _repository;
 
@@ -277,12 +285,14 @@ class SearchResultsController extends StateNotifier<SearchResultsState> {
 }
 
 final searchResultsControllerProvider = StateNotifierProvider.autoDispose
-    .family<SearchResultsController, SearchResultsState, String>((
-      ref,
-      keyword,
-    ) {
+    .family<
+      SearchResultsController,
+      SearchResultsState,
+      ({String keyword, int? categoryId})
+    >((ref, key) {
       return SearchResultsController(
         ref.watch(bookRepositoryProvider),
-        initialKeyword: keyword,
+        initialKeyword: key.keyword,
+        initialCategoryId: key.categoryId,
       );
     });

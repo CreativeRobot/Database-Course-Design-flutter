@@ -1,5 +1,11 @@
 class RecommendationHome {
-  const RecommendationHome({required this.source, required this.books});
+  const RecommendationHome({
+    required this.source,
+    required this.books,
+    this.page = 1,
+    this.size = 12,
+    this.hasMore = false,
+  });
 
   factory RecommendationHome.fromJson(dynamic json) {
     if (json is! Map<String, dynamic>) {
@@ -12,11 +18,17 @@ class RecommendationHome {
     return RecommendationHome(
       source: json['source'] as String? ?? 'POPULAR',
       books: books.map(RecommendationBook.fromJson).toList(growable: false),
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      size: (json['size'] as num?)?.toInt() ?? books.length,
+      hasMore: json['hasMore'] as bool? ?? false,
     );
   }
 
   final String source;
   final List<RecommendationBook> books;
+  final int page;
+  final int size;
+  final bool hasMore;
 
   bool get isPersonalized => source == 'PERSONALIZED';
 }

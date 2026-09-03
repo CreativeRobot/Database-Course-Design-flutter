@@ -6,6 +6,8 @@ import '../../../data/models/book/book_review.dart';
 import '../../../data/models/book/category.dart';
 import '../../../data/models/book/book_filter_option.dart';
 import '../../../data/models/common/page_response.dart';
+import '../../cart/data/bundle_models.dart';
+import 'promotion_models.dart';
 
 class BookRepository {
   const BookRepository(this._apiClient);
@@ -47,6 +49,19 @@ class BookRepository {
     return response.data;
   }
 
+  Future<List<BookCategory>> getFeaturedCategories({int limit = 8}) async {
+    final response = await _apiClient.get<List<BookCategory>>(
+      ApiPaths.featuredCategories,
+      queryParameters: {'limit': limit},
+      parser: (value) {
+        if (value is! List) {
+          throw const FormatException('分类响应必须是数组');
+        }
+        return value.map(BookCategory.fromJson).toList(growable: false);
+      },
+    );
+    return response.data;
+  }
   Future<List<BookCategory>> getCategories() async {
     final response = await _apiClient.get<List<BookCategory>>(
       ApiPaths.categories,
@@ -84,6 +99,23 @@ class BookRepository {
     return response.data;
   }
 
+  Future<List<BookBundle>> getBundles(int bookId) async {
+    final response = await _apiClient.get<List<BookBundle>>(
+      ApiPaths.bookBundles(bookId),
+      parser: (value) => (value as List).map(BookBundle.fromJson).toList(growable: false),
+    );
+    return response.data;
+  }
+
+  Future<PromotionHome> getPromotionHome({int limit = 8}) async {
+    final response = await _apiClient.get<PromotionHome>(
+      ApiPaths.promotionsHome,
+      queryParameters: {'limit': limit},
+      parser: PromotionHome.fromJson,
+    );
+    return response.data;
+  }
+
   Future<BookReviewSummary> getReviews(
     int bookId, {
     int page = 1,
@@ -97,3 +129,4 @@ class BookRepository {
     return response.data;
   }
 }
+

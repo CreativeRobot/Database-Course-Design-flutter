@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/admin/presentation/admin_page.dart';
 import '../../features/auth/presentation/auth_pages.dart';
 import '../../features/books/presentation/books_page.dart';
+import '../../features/books/presentation/category_books_page.dart';
 import '../../features/books/presentation/search_results_page.dart';
 import '../../features/cart/presentation/cart_page.dart';
 import '../../features/orders/presentation/checkout_page.dart';
@@ -21,6 +22,7 @@ List<RouteBase> buildAppRoutes() => [
 
 List<GoRoute> _publicRoutes() => [
   GoRoute(path: AppRoutePaths.login, builder: (_, _) => const LoginPage()),
+  GoRoute(path: AppRoutePaths.forgotPassword, builder: (_, _) => const ForgotPasswordPage()),
   GoRoute(
     path: AppRoutePaths.register,
     builder: (_, _) => const RegisterPage(),
@@ -31,6 +33,15 @@ List<GoRoute> _publicRoutes() => [
     builder: (_, state) => SearchResultsPage(
       initialKeyword: state.uri.queryParameters['keyword'] ?? '',
     ),
+  ),
+  GoRoute(
+    path: '${AppRoutePaths.categories}/:categoryId',
+    builder: (_, state) {
+      final categoryId = int.tryParse(state.pathParameters['categoryId'] ?? '');
+      return categoryId == null
+          ? const BooksPage()
+          : CategoryBooksPage(categoryId: categoryId);
+    },
   ),
   GoRoute(
     path: '${AppRoutePaths.books}/:bookId',
@@ -75,3 +86,4 @@ List<GoRoute> _administratorRoutes() => [
       builder: (_, _) => AdminPage(section: section),
     ),
 ];
+

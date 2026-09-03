@@ -15,6 +15,14 @@ class CartRepository {
     return response.data;
   }
 
+  Future<ShoppingCart> addBundle(int bundleId) async {
+    final response = await _apiClient.post<ShoppingCart>(
+      ApiPaths.cartBundle(bundleId),
+      parser: ShoppingCart.fromJson,
+    );
+    return response.data;
+  }
+
   Future<CartItem> addItem({required int bookId, int quantity = 1}) async {
     final response = await _apiClient.post<CartItem>(
       ApiPaths.cartItems,

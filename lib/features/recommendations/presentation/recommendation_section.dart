@@ -8,12 +8,16 @@ class RecommendationBooks extends StatelessWidget {
     required this.home,
     required this.baseUrl,
     required this.onBookTap,
+    this.onLoadMore,
+    this.loadingMore = false,
     super.key,
   });
 
   final RecommendationHome home;
   final String baseUrl;
   final ValueChanged<int> onBookTap;
+  final VoidCallback? onLoadMore;
+  final bool loadingMore;
 
   @override
   Widget build(BuildContext context) {
@@ -103,14 +107,7 @@ class RecommendationBooks extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 5),
-                          Text(
-                            money(book.salePrice),
-                            style: const TextStyle(
-                              color: CommerceColors.ink,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          _RecommendationPrice(book: book),
                         ],
                       ),
                     ),
@@ -119,6 +116,88 @@ class RecommendationBooks extends StatelessWidget {
               },
             );
           },
+        ),
+        if (onLoadMore != null && home.hasMore) ...[
+          const SizedBox(height: 18),
+          Center(
+            child: IconButton(
+              onPressed: loadingMore ? null : onLoadMore,
+              tooltip: loadingMore ? '正在加载更多推荐' : '加载更多推荐',
+              icon: loadingMore
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RecommendationPrice extends StatelessWidget {
+  const _RecommendationPrice({required this.book});
+
+  final RecommendationBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDiscounted = book.originalPrice > book.salePrice;
+    final isBundle = book.title.contains('组合包') ||
+        book.reason.contains('组合包') ||
+        book.reason.toLowerCase().contains('bundle');
+    final badge = isBundle
+        ? '组合包更优惠'
+        : isDiscounted
+        ? '限时折扣'
+        : null;
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        if (badge != null)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: isBundle
+                  ? const Color(0xFFE7F6EF)
+                  : const Color(0xFFFFE4E1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  color: isBundle
+                      ? CommerceColors.success
+                      : const Color(0xFFB42318),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        if (isDiscounted)
+          Text(
+            money(book.originalPrice),
+            style: const TextStyle(
+              color: CommerceColors.muted,
+              fontSize: 12,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+        Text(
+          money(book.salePrice),
+          style: const TextStyle(
+            color: CommerceColors.ink,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );

@@ -1,3 +1,5 @@
+import 'bundle_models.dart';
+
 class CartItem {
   const CartItem({
     required this.id,
@@ -68,6 +70,11 @@ class ShoppingCart {
     required this.totalQuantity,
     required this.selectedQuantity,
     required this.selectedAmount,
+    this.regularAmount,
+    this.bundleDiscountAmount = 0,
+    this.payableAmount,
+    this.eligibleBundles = const [],
+    this.appliedBundles = const [],
   });
 
   factory ShoppingCart.fromJson(dynamic json) {
@@ -83,6 +90,20 @@ class ShoppingCart {
       totalQuantity: (json['totalQuantity'] as num?)?.toInt() ?? 0,
       selectedQuantity: (json['selectedQuantity'] as num?)?.toInt() ?? 0,
       selectedAmount: (json['selectedAmount'] as num?)?.toDouble() ?? 0,
+      regularAmount: (json['regularAmount'] as num?)?.toDouble(),
+      bundleDiscountAmount:
+          (json['bundleDiscountAmount'] as num?)?.toDouble() ?? 0,
+      payableAmount: (json['payableAmount'] as num?)?.toDouble(),
+      eligibleBundles: (json['eligibleBundles'] is List)
+          ? (json['eligibleBundles'] as List)
+              .map(CartBundle.fromJson)
+              .toList(growable: false)
+          : const [],
+      appliedBundles: (json['appliedBundles'] is List)
+          ? (json['appliedBundles'] as List)
+              .map(CartBundle.fromJson)
+              .toList(growable: false)
+          : const [],
     );
   }
 
@@ -91,12 +112,22 @@ class ShoppingCart {
     totalQuantity: 0,
     selectedQuantity: 0,
     selectedAmount: 0,
+    regularAmount: 0,
+    payableAmount: 0,
   );
 
   final List<CartItem> items;
   final int totalQuantity;
   final int selectedQuantity;
   final double selectedAmount;
+  final double? regularAmount;
+  final double bundleDiscountAmount;
+  final double? payableAmount;
+  final List<CartBundle> eligibleBundles;
+  final List<CartBundle> appliedBundles;
+
+  double get checkoutAmount =>
+      payableAmount ?? (selectedAmount - bundleDiscountAmount);
 
   List<CartItem> get selectedItems =>
       items.where((item) => item.selected).toList(growable: false);

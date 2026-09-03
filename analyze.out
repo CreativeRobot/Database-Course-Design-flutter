@@ -1,0 +1,102 @@
+Analyzing flutter_application_bookstore...                      
+
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\app\router\app_router.dart:29:11 - unnecessary_underscores
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:30:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:59:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:60:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:61:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:62:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:165:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:181:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:214:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:215:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:239:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:240:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:274:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:275:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:276:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:298:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:299:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\data\admin_repository.dart:300:7 - use_null_aware_elements
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_entity_pages.dart:58:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_entity_pages.dart:126:7 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of 'toList' in a spread. Try removing the invocation of 'toList' - lib\features\admin\presentation\admin_catalog_entity_pages.dart:466:30 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_catalog_pages.dart:129:24 - unnecessary_underscores
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_pages.dart:174:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_pages.dart:188:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_pages.dart:573:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_catalog_pages.dart:578:11 - curly_braces_in_flow_control_structures
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\admin\presentation\admin_catalog_pages.dart:871:7 - use_null_aware_elements
+warning - Unused import: '../../orders/presentation/order_bundle_history.dart'. Try removing the import directive - lib\features\admin\presentation\admin_orders_reviews_pages.dart:8:8 - unused_import
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_orders_reviews_pages.dart:147:24 - unnecessary_underscores
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_orders_reviews_pages.dart:164:9 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_orders_reviews_pages.dart:179:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_orders_reviews_pages.dart:184:9 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_orders_reviews_pages.dart:432:24 - unnecessary_underscores
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_orders_reviews_pages.dart:452:7 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_orders_reviews_pages.dart:622:24 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_page.dart:259:39 - unnecessary_underscores
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_refunds_page.dart:72:17 - curly_braces_in_flow_control_structures
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_refunds_page.dart:96:22 - unnecessary_underscores
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\admin\presentation\admin_refunds_page.dart:106:9 - curly_braces_in_flow_control_structures
+warning - Unused import: '../data/admin_repository.dart'. Try removing the import directive - lib\features\admin\presentation\admin_users_page.dart:5:8 - unused_import
+   info - Unnecessary use of multiple underscores. Try using '_' - lib\features\admin\presentation\admin_users_page.dart:144:24 - unnecessary_underscores
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._repository') to initialize the field - lib\features\auth\presentation\auth_controller.dart:55:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._tokenStorage') to initialize the field - lib\features\auth\presentation\auth_controller.dart:56:8 - prefer_initializing_formals
+warning - The declaration '_BrandMark' isn't referenced. Try removing the declaration of '_BrandMark' - lib\features\auth\presentation\auth_pages.dart:629:7 - unused_element
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\books\data\book_repository.dart:34:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\books\data\book_repository.dart:35:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\books\data\book_repository.dart:36:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\books\data\book_repository.dart:37:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\books\data\book_repository.dart:38:9 - use_null_aware_elements
+warning - Unused import: '../../cart/data/bundle_models.dart'. Try removing the import directive - lib\features\books\presentation\books_controller.dart:8:8 - unused_import
+  error - The method 'bookBundlesProvider' isn't defined for the type '_BookDetailPageState'. Try correcting the name to the name of an existing method, or defining a method named 'bookBundlesProvider' - lib\features\books\presentation\books_page.dart:172:31 - undefined_method
+warning - The declaration '_addBundle' isn't referenced. Try removing the declaration of '_addBundle' - lib\features\books\presentation\books_page.dart:249:16 - unused_element
+warning - The declaration '_BooksHero' isn't referenced. Try removing the declaration of '_BooksHero' - lib\features\books\presentation\books_page.dart:437:7 - unused_element
+warning - The declaration '_BooksGrid' isn't referenced. Try removing the declaration of '_BooksGrid' - lib\features\books\presentation\books_page.dart:497:7 - unused_element
+  error - The named parameter 'onAddBundle' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'onAddBundle' - lib\features\books\presentation\books_page.dart:542:12 - undefined_named_parameter
+  error - Undefined name '_addBundle'. Try correcting the name to one that is defined, or defining the name - lib\features\books\presentation\books_page.dart:542:25 - undefined_identifier
+  error - All final variables must be initialized, but 'onAddBundle' isn't. Try adding an initializer for the field - lib\features\books\presentation\books_page.dart:686:9 - final_not_initialized_constructor
+warning - A value for optional parameter 'addingBundleId' isn't ever given. Try removing the unused parameter - lib\features\books\presentation\books_page.dart:689:10 - unused_element_parameter
+  error - Undefined name 'ref'. Try correcting the name to one that is defined, or defining the name - lib\features\books\presentation\books_page.dart:762:35 - undefined_identifier
+warning - The declaration '_BooksLoading' isn't referenced. Try removing the declaration of '_BooksLoading' - lib\features\books\presentation\books_page.dart:1238:7 - unused_element
+warning - The declaration '_InlineNotice' isn't referenced. Try removing the declaration of '_InlineNotice' - lib\features\books\presentation\books_page.dart:1328:7 - unused_element
+warning - Unused import: '../data/book_repository.dart'. Try removing the import directive - lib\features\books\presentation\homepage_controller.dart:6:8 - unused_import
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._loadBooks') to initialize the field - lib\features\books\presentation\homepage_controller.dart:105:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._loadCategories') to initialize the field - lib\features\books\presentation\homepage_controller.dart:106:8 - prefer_initializing_formals
+warning - Unused import: '../../../core/utils/media_url.dart'. Try removing the import directive - lib\features\cart\data\bundle_models.dart:1:8 - unused_import
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\cart\data\bundle_repository.dart:20:104 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\cart\data\bundle_repository.dart:25:106 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\cart\data\cart_repository.dart:43:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\cart\data\cart_repository.dart:44:9 - use_null_aware_elements
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._repository') to initialize the field - lib\features\cart\presentation\cart_controller.dart:50:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._authController') to initialize the field - lib\features\cart\presentation\cart_controller.dart:51:9 - prefer_initializing_formals
+warning - The declaration '_CartLoading' isn't referenced. Try removing the declaration of '_CartLoading' - lib\features\cart\presentation\cart_page.dart:762:7 - unused_element
+warning - The declaration '_CartFailure' isn't referenced. Try removing the declaration of '_CartFailure' - lib\features\cart\presentation\cart_page.dart:774:7 - unused_element
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\orders\data\order_repository.dart:19:9 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' - lib\features\orders\presentation\checkout_page.dart:269:9 - use_null_aware_elements
+warning - The declaration '_AddressLoading' isn't referenced. Try removing the declaration of '_AddressLoading' - lib\features\orders\presentation\checkout_page.dart:584:7 - unused_element
+warning - The declaration '_AddressFailure' isn't referenced. Try removing the declaration of '_AddressFailure' - lib\features\orders\presentation\checkout_page.dart:596:7 - unused_element
+warning - Unused import: 'order_bundle_history.dart'. Try removing the import directive - lib\features\orders\presentation\order_detail_page.dart:16:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\features\orders\presentation\order_detail_page.dart:874:13 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\features\orders\presentation\order_detail_page.dart:885:13 - deprecated_member_use
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._repository') to initialize the field - lib\features\orders\presentation\orders_controller.dart:76:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._authController') to initialize the field - lib\features\orders\presentation\orders_controller.dart:77:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._cartController') to initialize the field - lib\features\orders\presentation\orders_controller.dart:78:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._repository') to initialize the field - lib\features\profile\presentation\profile_controller.dart:63:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._authController') to initialize the field - lib\features\profile\presentation\profile_controller.dart:64:9 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._repository') to initialize the field - lib\features\reviews\presentation\reviews_controller.dart:62:8 - prefer_initializing_formals
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._authController') to initialize the field - lib\features\reviews\presentation\reviews_controller.dart:63:8 - prefer_initializing_formals
+   info - Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import - test\admin_api_paths_red_check.dart:1:8 - avoid_relative_lib_imports
+warning - Unused import: 'dart:async'. Try removing the import directive - test\api_client_session_expiry_test.dart:1:8 - unused_import
+warning - Unused import: 'dart:convert'. Try removing the import directive - test\book_bundle_feature_test.dart:1:8 - unused_import
+warning - Unused import: 'dart:io'. Try removing the import directive - test\book_bundle_feature_test.dart:2:8 - unused_import
+warning - Unused import: 'package:flutter_application_bookstore/core/config/app_config.dart'. Try removing the import directive - test\book_bundle_feature_test.dart:5:8 - unused_import
+warning - Unused import: 'package:flutter_application_bookstore/core/network/api_client.dart'. Try removing the import directive - test\book_bundle_feature_test.dart:6:8 - unused_import
+warning - Unused import: 'package:flutter_application_bookstore/core/storage/token_storage.dart'. Try removing the import directive - test\book_bundle_feature_test.dart:7:8 - unused_import
+warning - Unused import: 'package:flutter_application_bookstore/features/cart/data/cart_repository.dart'. Try removing the import directive - test\book_bundle_feature_test.dart:10:8 - unused_import
+warning - Unused import: 'package:shared_preferences/shared_preferences.dart'. Try removing the import directive - test\book_bundle_feature_test.dart:16:8 - unused_import
+   info - Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import - tool\book_pricing_check.dart:1:8 - avoid_relative_lib_imports
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\book_pricing_check.dart:30:3 - avoid_print
+
+98 issues found. (ran in 2.0s)

@@ -5,6 +5,7 @@ import '../../../core/providers.dart';
 import '../../../data/models/book/book.dart';
 import '../../../data/models/book/book_detail.dart';
 import '../../../data/models/book/book_review.dart';
+import '../../cart/data/bundle_models.dart';
 import '../data/book_repository.dart';
 
 enum BooksStatus { initial, loading, refreshing, success, failure }
@@ -135,6 +136,10 @@ final bookDetailProvider = FutureProvider.family<BookDetail, int>((
   return ref.watch(bookRepositoryProvider).getBookDetail(bookId);
 });
 
+final bookBundlesProvider = FutureProvider.family<List<BookBundle>, int>((ref, bookId) {
+  return ref.watch(bookRepositoryProvider).getBundles(bookId);
+});
+
 final bookReviewsProvider =
     FutureProvider.family<BookReviewSummary, ({int bookId, int page})>((
       ref,
@@ -144,3 +149,5 @@ final bookReviewsProvider =
           .watch(bookRepositoryProvider)
           .getReviews(key.bookId, page: key.page);
     });
+
+

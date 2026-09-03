@@ -2,6 +2,7 @@ import '../../../core/constants/api_paths.dart';
 import '../../../core/network/api_client.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
+import '../../../data/models/auth/security_question.dart';
 
 class ProfileRepository {
   const ProfileRepository(this._apiClient);
@@ -42,6 +43,19 @@ class ProfileRepository {
     return response.data;
   }
 
+  Future<List<SecurityQuestion>> getSecurityQuestions() async {
+    final response = await _apiClient.get<List<SecurityQuestion>>(
+      ApiPaths.meSecurityQuestions,
+      parser: (value) => (value as List).map(SecurityQuestion.fromJson).toList(growable: false),
+    );
+    return response.data;
+  }
+
+  Future<void> updateSecurityQuestions({required List<SecurityAnswer> questions}) async {
+    await _apiClient.put<Object?>(ApiPaths.meSecurityQuestions, data: {
+      'questions': questions.map((item) => item.toJson()).toList(),
+    });
+  }
   Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -103,3 +117,4 @@ class ProfileRepository {
     await _apiClient.delete<Object?>(ApiPaths.address(addressId));
   }
 }
+

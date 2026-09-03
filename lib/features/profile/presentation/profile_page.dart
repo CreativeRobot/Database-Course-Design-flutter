@@ -8,6 +8,8 @@ import '../../../core/providers.dart';
 import '../../../core/utils/media_url.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
+import '../../../data/models/auth/security_question.dart';
+import '../../../data/models/auth/security_question_catalog.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../orders/data/order_models.dart';
@@ -158,6 +160,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ProfileSection.security => _SecuritySection(
               submitting: state.submitting,
               onChangePassword: _changePassword,
+              securityConfigured: profile.securityQuestionsConfigured,
+              onManageSecurityQuestions: _manageSecurityQuestions,
             ),
           },
         ),
@@ -314,6 +318,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _manageSecurityQuestions() async {
+    final result = await showDialog<List<SecurityAnswer>>(
+      context: context,
+      builder: (_) => _SecurityQuestionsDialog(),
+    );
+    if (result == null || !mounted) return;
+    final success = await ref.read(profileControllerProvider.notifier).updateSecurityQuestions(questions: result);
+    if (success && mounted) _showSuccess('密保问题已保存');
+  }
   Future<void> _logout() async {
     await ref.read(authControllerProvider.notifier).logout();
     if (mounted) {
@@ -1361,6 +1374,8 @@ class _SecuritySection extends StatefulWidget {
   const _SecuritySection({
     required this.submitting,
     required this.onChangePassword,
+    required this.securityConfigured,
+    required this.onManageSecurityQuestions,
   });
 
   final bool submitting;
@@ -1370,6 +1385,8 @@ class _SecuritySection extends StatefulWidget {
     required String confirmPassword,
   })
   onChangePassword;
+  final bool securityConfigured;
+  final VoidCallback onManageSecurityQuestions;
 
   @override
   State<_SecuritySection> createState() => _SecuritySectionState();
@@ -1420,6 +1437,16 @@ class _SecuritySectionState extends State<_SecuritySection> {
           subtitle: '定期更换密码，保持账户和订单信息安全。',
         ),
         const SizedBox(height: 34),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Icon(widget.securityConfigured ? Icons.verified_user_outlined : Icons.warning_amber_outlined, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(widget.securityConfigured ? '已设置 3 个密保问题' : '尚未设置密保问题；未设置时无法修改或找回密码', style: const TextStyle(color: ProfileColors.muted, fontSize: 13))),
+            OutlinedButton.icon(onPressed: widget.onManageSecurityQuestions, icon: const Icon(Icons.edit_outlined, size: 17), label: Text(widget.securityConfigured ? '修改密保' : '设置密保')),
+          ],
+        ),
+        const SizedBox(height: 20),
         _FormSurface(
           child: Form(
             key: _formKey,
@@ -2113,3 +2140,47 @@ abstract final class ProfileColors {
   static const line = Color(0xFFE5E3DE);
   static const sand = Color(0xFFEAE8E1);
 }
+
+class _SecurityQuestionsDialog extends StatefulWidget {
+  const _SecurityQuestionsDialog({this.initialQuestions = const []});
+
+  final List<SecurityQuestion> initialQuestions;
+  @override
+  State<_SecurityQuestionsDialog> createState() => _SecurityQuestionsDialogState();
+}
+
+class _SecurityQuestionsDialogState extends State<_SecurityQuestionsDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final List<String> _keys;
+
+  @override
+  void initState() {
+    super.initState();
+    _keys = widget.initialQuestions.length == 3
+        ? widget.initialQuestions.map((item) => item.key).toList()
+        : ['Q1', 'Q2', 'Q3'];
+  }
+  final _answers = List.generate(3, (_) => TextEditingController());
+
+  @override
+  void dispose() { for (final controller in _answers) controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('设置密保问题'),
+    content: SizedBox(width: 520, child: Form(key: _formKey, child: SingleChildScrollView(child: Column(children: [
+      for (var index = 0; index < 3; index++) ...[
+        DropdownButtonFormField<String>(value: _keys[index], decoration: InputDecoration(labelText: '问题 ${index + 1}'), items: securityQuestionCatalog.map((q) => DropdownMenuItem(value: q.key, child: Text(q.question))).toList(), onChanged: (value) => setState(() => _keys[index] = value!), validator: (v) => v == null ? '请选择问题' : null),
+        const SizedBox(height: 10),
+        TextFormField(controller: _answers[index], decoration: const InputDecoration(labelText: '答案'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null),
+        const SizedBox(height: 14),
+      ],
+    ]))),),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')), FilledButton(onPressed: () { if (!_formKey.currentState!.validate() || _keys.toSet().length != 3) return; Navigator.pop(context, [for (var i = 0; i < 3; i++) SecurityAnswer(questionKey: _keys[i], answer: _answers[i].text.trim())]); }, child: const Text('保存'))],
+  );
+}
+
+
+
+
+

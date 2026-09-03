@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/utils/book_presale.dart';
 import '../../cart/presentation/commerce_widgets.dart';
 import '../../orders/data/order_models.dart';
+import '../../orders/presentation/order_bundle_history.dart';
 import '../../reviews/data/review_models.dart';
 import '../data/admin_models.dart';
 import 'admin_page.dart';
@@ -302,6 +303,10 @@ class _OrderDetailDialog extends StatelessWidget {
                 ),
                 trailing: Text(money(item.subtotal)),
               ),
+             if (order.bundles.isNotEmpty) ...[
+               const Divider(height: 28),
+               OrderBundleHistory(bundles: order.bundles),
+             ],
           ],
         ),
       ),
@@ -799,3 +804,6 @@ String _inventoryLabel(String type) => switch (type) {
   'MANUAL_ADJUSTMENT' => '手动调整',
   _ => type,
 };
+
+
+

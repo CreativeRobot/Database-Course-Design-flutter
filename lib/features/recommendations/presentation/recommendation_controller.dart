@@ -5,7 +5,14 @@ import '../../../core/providers.dart';
 import '../data/recommendation_models.dart';
 import '../data/recommendation_repository.dart';
 
-enum RecommendationStatus { initial, loading, refreshing, success, failure }
+enum RecommendationStatus {
+  initial,
+  loading,
+  loadingMore,
+  refreshing,
+  success,
+  failure,
+}
 
 class RecommendationState {
   const RecommendationState({
@@ -19,6 +26,7 @@ class RecommendationState {
   final String? errorMessage;
 
   bool get hasRecommendations => home?.books.isNotEmpty ?? false;
+  bool get isLoadingMore => status == RecommendationStatus.loadingMore;
 
   RecommendationState copyWith({
     RecommendationStatus? status,
@@ -42,7 +50,8 @@ class RecommendationController extends StateNotifier<RecommendationState> {
 
   Future<void> load({int limit = 12}) async {
     if (state.status == RecommendationStatus.loading ||
-        state.status == RecommendationStatus.refreshing) {
+        state.status == RecommendationStatus.refreshing ||
+        state.status == RecommendationStatus.loadingMore) {
       return;
     }
 
@@ -54,7 +63,7 @@ class RecommendationController extends StateNotifier<RecommendationState> {
       clearError: true,
     );
     try {
-      final home = await _source.fetchHome(limit: limit);
+      final home = await _source.fetchHome(limit: limit, page: 1);
       state = state.copyWith(
         status: RecommendationStatus.success,
         home: home,
@@ -74,6 +83,48 @@ class RecommendationController extends StateNotifier<RecommendationState> {
       state = state.copyWith(
         status: RecommendationStatus.failure,
         errorMessage: '推荐暂时无法加载，请稍后再试',
+      );
+    }
+  }
+
+  Future<void> loadMore() async {
+    final current = state.home;
+    if (current == null ||
+        !current.hasMore ||
+        state.isLoadingMore ||
+        state.status == RecommendationStatus.loading ||
+        state.status == RecommendationStatus.refreshing) {
+      return;
+    }
+    state = state.copyWith(
+      status: RecommendationStatus.loadingMore,
+      clearError: true,
+    );
+    try {
+      final next = await _source.fetchHome(
+        limit: current.size,
+        page: current.page + 1,
+      );
+      final merged = RecommendationHome(
+        source: current.source,
+        books: [...current.books, ...next.books],
+        page: next.page,
+        size: next.size,
+        hasMore: next.hasMore,
+      );
+      state = state.copyWith(
+        status: RecommendationStatus.success,
+        home: merged,
+      );
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        status: RecommendationStatus.success,
+        errorMessage: _friendlyMessage(error),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        status: RecommendationStatus.success,
+        errorMessage: '更多推荐暂时无法加载，请稍后再试',
       );
     }
   }

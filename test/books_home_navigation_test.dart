@@ -10,7 +10,7 @@ void main() {
     'lib/features/books/presentation/search_results_page.dart',
   ).readAsStringSync();
 
-  test('home header provides a search box before the cart action', () {
+  test('home header provides icon actions after the search box', () {
     final header = booksSource.substring(
       booksSource.indexOf('class _BooksHeader'),
       booksSource.indexOf('class _BooksHero'),
@@ -20,8 +20,10 @@ void main() {
     expect(booksSource, contains("hintText: '搜索书名'"));
     expect(
       header.indexOf('child: _HeaderSearch('),
-      lessThan(header.indexOf("label: const Text('购物车')")),
+      lessThan(header.indexOf("message: '购物车'")),
     );
+    expect(header, contains("message: '随机一本图书'"));
+    expect(header, contains('Icons.shopping_bag_outlined'));
   });
 
   test('home is labelled as the online bookstore without catalog filters', () {

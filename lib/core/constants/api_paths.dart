@@ -2,19 +2,25 @@ abstract final class ApiPaths {
   static const login = '/api/auth/login';
   static const register = '/api/auth/register';
   static const captcha = '/api/auth/captcha';
+  static const securityQuestions = '/api/auth/security-questions';
+  static const forgotPassword = '/api/auth/forgot-password';
 
   static const books = '/api/books';
   static const categories = '/api/categories';
+  static const featuredCategories = '/api/categories/featured';
   static const authors = '/api/authors';
   static const publishers = '/api/publishers';
   static const recommendationsHome = '/api/recommendations/home';
+  static const promotionsHome = '/api/promotions/home';
 
   static String book(int bookId) => '$books/$bookId';
   static String bookReviews(int bookId) => '$books/$bookId/reviews';
+  static String bookBundles(int bookId) => '$books/$bookId/bundles';
 
   static const me = '/api/user/me';
   static const meAvatar = '$me/avatar';
   static const mePassword = '/api/user/me/password';
+  static const meSecurityQuestions = '/api/user/me/security-questions';
 
   static const addresses = '/api/user/addresses';
   static String address(int addressId) => '$addresses/$addressId';
@@ -26,6 +32,7 @@ abstract final class ApiPaths {
   static const cartSelection = '/api/cart/selection';
   static const cartSelected = '/api/cart/selected';
   static String cartItem(int bookId) => '$cartItems/$bookId';
+  static String cartBundle(int bundleId) => '$cart/bundles/$bundleId';
 
   static const orders = '/api/orders';
   static String order(int orderId) => '$orders/$orderId';
@@ -43,6 +50,13 @@ abstract final class ApiPaths {
   static String review(int reviewId) => '$reviews/$reviewId';
 
   static const admin = '/api/admin';
+
+  static const adminBookBundles = '$admin/book-bundles';
+  static const adminPromotions = '$admin/promotions';
+  static String adminPromotion(int id) => '$adminPromotions/$id';
+  static String adminPromotionStatus(int id) => '${adminPromotion(id)}/status';
+  static String adminBookBundle(int id) => '$adminBookBundles/$id';
+  static String adminBookBundleStatus(int id) => '$adminBookBundle(id)/status';
 
   static const adminUsers = '$admin/users';
   static String adminUser(int id) => '$adminUsers/$id';
@@ -79,3 +93,4 @@ abstract final class ApiPaths {
   static String adminRefundReview(int id) => '${adminRefund(id)}/review';
   static const adminImageUpload = '$admin/uploads/images';
 }
+

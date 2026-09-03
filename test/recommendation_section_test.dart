@@ -37,6 +37,9 @@ void main() {
     expect(find.text('为你推荐'), findsOneWidget);
     expect(find.text('与你喜欢的分类相似'), findsOneWidget);
     expect(find.text('算法导论'), findsOneWidget);
+    expect(find.text('限时折扣'), findsOneWidget);
+    expect(find.text('¥128.00'), findsOneWidget);
+    expect(find.text('¥99.50'), findsOneWidget);
     expect(find.byType(GridView), findsOneWidget);
   });
 }

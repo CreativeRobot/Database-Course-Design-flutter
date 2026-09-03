@@ -7,10 +7,16 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_controller.dart';
+import '../data/auth_repository.dart';
 import '../../../app/router/app_route_guard.dart';
+import '../../../app/router/app_route_paths.dart';
 import 'login_captcha_policy.dart';
 import '../../../data/models/auth/captcha.dart';
+import '../../../data/models/auth/security_question.dart';
+import '../../../data/models/auth/security_question_catalog.dart';
 import '../../cart/presentation/commerce_widgets.dart';
+
+
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -206,7 +212,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: null,
+                  onPressed: () => context.go(AppRoutePaths.forgotPassword),
                   style: TextButton.styleFrom(
                     foregroundColor: AuthColors.ink,
                     padding: EdgeInsets.zero,
@@ -244,6 +250,118 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
+class ForgotPasswordPage extends ConsumerStatefulWidget {
+  const ForgotPasswordPage({super.key});
+
+  @override
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+}
+
+class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _answerControllers = List.generate(2, (_) => TextEditingController());
+  List<SecurityQuestion> _questions = const [];
+  List<String?> _selectedKeys = [null, null];
+  String? _error;
+  bool _loadingQuestions = false;
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    for (final controller in _answerControllers) controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadQuestions() async {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      setState(() => _error = '请输入用户名');
+      return;
+    }
+    setState(() { _loadingQuestions = true; _error = null; });
+    try {
+      final questions = await ref.read(authRepositoryProvider).fetchSecurityQuestions(username);
+      if (!mounted) return;
+      setState(() {
+        _questions = questions;
+        _selectedKeys = [null, null];
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loadingQuestions = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_questions.length < 3 || _selectedKeys.any((key) => key == null)) {
+      setState(() => _error = '请先获取密保问题，并回答两个不同的问题');
+      return;
+    }
+    setState(() { _submitting = true; _error = null; });
+    try {
+      await ref.read(authRepositoryProvider).forgotPassword(
+        username: _usernameController.text.trim(),
+        answers: [
+          for (var index = 0; index < 2; index++)
+            SecurityAnswer(questionKey: _selectedKeys[index]!, answer: _answerControllers[index].text.trim()),
+        ],
+        newPassword: _newPasswordController.text,
+        confirmPassword: _confirmPasswordController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('密码重置成功，请使用新密码登录')));
+        context.go(AppRoutePaths.login);
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthFrame(
+      eyebrow: 'BOOKSTORE  ·  ACCOUNT RECOVERY',
+      headline: '通过密保问题找回密码',
+      description: '回答已设置的两个密保问题，验证身份后即可设置新密码。',
+      bullets: const ['答案仅用于身份验证', '每次需要回答两个不同的问题', '没有密保记录的账户无法找回密码'],
+      card: Form(
+        key: _formKey,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: '用户名'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入用户名' : null),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(onPressed: _loadingQuestions ? null : _loadQuestions, icon: _loadingQuestions ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.quiz_outlined), label: const Text('获取密保问题')),
+          if (_questions.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            for (var index = 0; index < 2; index++) ...[
+              DropdownButtonFormField<String>(value: _selectedKeys[index], decoration: InputDecoration(labelText: '密保问题 ${index + 1}'), items: _questions.map((q) => DropdownMenuItem(value: q.key, child: Text(q.question))).toList(), onChanged: (value) => setState(() => _selectedKeys[index] = value), validator: (v) => v == null ? '请选择问题' : null),
+              const SizedBox(height: 12),
+              TextFormField(controller: _answerControllers[index], decoration: const InputDecoration(labelText: '密保答案'), validator: (v) => (v ?? '').trim().isEmpty ? '请输入答案' : null),
+              const SizedBox(height: 12),
+            ],
+            TextFormField(controller: _newPasswordController, obscureText: true, decoration: const InputDecoration(labelText: '新密码'), validator: (v) => (v ?? '').length < 6 ? '新密码至少需要 6 个字符' : null),
+            const SizedBox(height: 12),
+            TextFormField(controller: _confirmPasswordController, obscureText: true, decoration: const InputDecoration(labelText: '确认新密码'), validator: (v) => v != _newPasswordController.text ? '两次输入的新密码不一致' : null),
+            const SizedBox(height: 18),
+            AuthPrimaryButton(label: _submitting ? '正在重置' : '重置密码', icon: Icons.lock_reset_rounded, loading: _submitting, onPressed: _submit),
+          ],
+          if (_error != null) ...[const SizedBox(height: 12), AuthErrorBanner(message: _error!)],
+          const SizedBox(height: 16),
+          TextButton(onPressed: () => context.go(AppRoutePaths.login), child: const Text('返回登录')),
+        ]),
+      ),
+    );
+  }
+}
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
@@ -259,6 +377,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _securityAnswerControllers = List.generate(3, (_) => TextEditingController());
+  final _securityQuestionKeys = ['Q1', 'Q2', 'Q3'];
   final _captchaController = TextEditingController();
   Captcha? _captcha;
   bool _captchaLoading = false;
@@ -275,6 +395,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    for (final controller in _securityAnswerControllers) controller.dispose();
     _captchaController.dispose();
     super.dispose();
   }
@@ -335,6 +456,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           phone: _phoneController.text.trim(),
           captchaId: captcha.captchaId,
           captchaCode: _captchaController.text.trim(),
+          securityQuestions: [
+            for (var index = 0; index < 3; index++)
+              SecurityAnswer(
+                questionKey: _securityQuestionKeys[index],
+                answer: _securityAnswerControllers[index].text.trim(),
+              ),
+          ],
         );
     final session = ref.read(authControllerProvider).session;
     if (success && mounted && session != null) {
@@ -419,6 +547,27 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   return null;
                 },
               ),
+              const SizedBox(height: 18),
+              const Text('设置三个密保问题', style: TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              const Text('找回密码时需要答对其中两个，请选择自己能记住答案的问题。', style: TextStyle(color: AuthColors.muted, fontSize: 12)),
+              for (var index = 0; index < 3; index++) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _securityQuestionKeys[index],
+                  decoration: InputDecoration(labelText: '密保问题 ${index + 1}'),
+                  items: securityQuestionCatalog.where((item) => !_securityQuestionKeys.asMap().entries.any((entry) => entry.key != index && entry.value == item.key)).map((item) => DropdownMenuItem(value: item.key, child: Text(item.question))).toList(),
+                  onChanged: (value) => setState(() => _securityQuestionKeys[index] = value ?? _securityQuestionKeys[index]),
+                ),
+                const SizedBox(height: 8),
+                AuthField(
+                  controller: _securityAnswerControllers[index],
+                  label: '密保答案 ${index + 1}',
+                  hintText: '请输入答案',
+                  prefixIcon: Icons.shield_outlined,
+                  validator: (value) => (value ?? '').trim().isEmpty ? '请输入密保答案' : null,
+                ),
+              ],
               const SizedBox(height: 16),
               AuthField(
                 controller: _passwordController,
@@ -1244,3 +1393,6 @@ abstract final class AuthColors {
   static const placeholder = Color(0xFFA7A49D);
   static const line = Color(0xFFE5E3DE);
 }
+
+
+

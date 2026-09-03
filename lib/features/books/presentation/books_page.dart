@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +16,11 @@ import '../../../data/models/book/book_review.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
 import '../../cart/presentation/commerce_widgets.dart';
+import '../../cart/data/bundle_models.dart';
 import '../../recommendations/presentation/recommendation_controller.dart';
-import '../../recommendations/presentation/recommendation_section.dart';
+import 'homepage_controller.dart';
+import 'homepage_sections.dart';
+import 'book_bundle_offers.dart';
 
 class BooksPage extends ConsumerStatefulWidget {
   const BooksPage({super.key});
@@ -34,6 +39,7 @@ class _BooksPageState extends ConsumerState<BooksPage> {
       final auth = ref.read(authControllerProvider);
       if (auth.session?.role != 'ADMIN') {
         ref.read(recommendationControllerProvider.notifier).load();
+        ref.read(homepageControllerProvider.notifier).load();
       }
     });
   }
@@ -56,6 +62,12 @@ class _BooksPageState extends ConsumerState<BooksPage> {
     final session = ref.watch(authControllerProvider).session;
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     final recommendation = ref.watch(recommendationControllerProvider);
+    final homepage = ref.watch(homepageControllerProvider);
+    final randomCandidates = HomepageSections.randomCandidates([
+      ...homepage.newReleases,
+      ...homepage.bestSellers,
+      ...homepage.upcoming,
+    ]);
 
     return Scaffold(
       backgroundColor: BookStoreColors.canvas,
@@ -71,6 +83,9 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                     session: session,
                     searchController: _searchController,
                     onSearch: _search,
+                    onRandomBook: randomCandidates.isEmpty
+                        ? null
+                        : () => _openRandomBook(randomCandidates),
                     onCart: () => _protectedAction(context, '/cart'),
                     onAdmin: () => _protectedAction(context, '/admin'),
                     onProfile: () => _protectedAction(context, '/profile'),
@@ -95,22 +110,25 @@ class _BooksPageState extends ConsumerState<BooksPage> {
                             child: const Text('进入管理台'),
                           ),
                         )
-                      else if (recommendation.home != null)
-                        RecommendationBooks(
-                          home: recommendation.home!,
+                      else
+                        HomepageSectionsView(
+                          data: homepage,
+                          recommendation: recommendation.home,
                           baseUrl: baseUrl,
                           onBookTap: (bookId) => context.push('/books/$bookId'),
-                        )
-                      else if (recommendation.status ==
-                          RecommendationStatus.loading)
-                        const CommerceLoadingState(message: '正在准备推荐')
-                      else if (recommendation.status ==
-                          RecommendationStatus.failure)
-                        CommerceErrorState(
-                          message: recommendation.errorMessage ?? '推荐暂时无法加载',
-                          onRetry: () => ref
+                          onRecommendationLoadMore: () => ref
                               .read(recommendationControllerProvider.notifier)
-                              .load(),
+                              .loadMore(),
+                          recommendationLoadingMore:
+                              recommendation.isLoadingMore,
+                          onRetry: () {
+                            ref
+                                .read(homepageControllerProvider.notifier)
+                                .load();
+                            ref
+                                .read(recommendationControllerProvider.notifier)
+                                .load();
+                          },
                         ),
                     ]),
                   ),
@@ -129,6 +147,11 @@ class _BooksPageState extends ConsumerState<BooksPage> {
       return;
     }
     context.push('/login');
+  }
+
+  void _openRandomBook(List<Book> books) {
+    final book = books[Random().nextInt(books.length)];
+    context.push('/books/${book.id}');
   }
 }
 
@@ -164,6 +187,7 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
     final ref = this.ref;
     final bookId = widget.bookId;
     final detail = ref.watch(bookDetailProvider(bookId));
+    final bundles = ref.watch(bookBundlesProvider(bookId));
     final reviews = ref.watch(
       bookReviewsProvider((bookId: bookId, page: reviewPage)),
     );
@@ -202,6 +226,7 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
         ),
         data: (book) => _BookDetailContent(
           book: book,
+          bundles: bundles.asData?.value ?? const [],
           reviews: reviews,
           loadedReviews: _loadedReviews,
           cachedReviewSummary: _lastReviewSummary,
@@ -210,6 +235,11 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
             bookReviewsProvider((bookId: bookId, page: reviewPage)),
           ),
           imageUrl: _coverUrl(baseUrl, book.coverUrl),
+          addingBundleId:
+              cartState.busyAll && bundles.asData?.value.isNotEmpty == true
+              ? bundles.asData!.value.first.id
+              : null,
+          onAddBundle: _addBundle,
           adding: cartState.busyBookIds.contains(bookId),
           onAdd: book.stock <= 0 || book.status != 'ON_SALE'
               ? null
@@ -238,6 +268,26 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
       ),
     );
   }
+
+  Future<bool> _addBundle(int bundleId) async {
+    if (!ref.read(authControllerProvider).isAuthenticated) {
+      context.push('/login');
+      return false;
+    }
+    final success = await ref
+        .read(cartControllerProvider.notifier)
+        .addBundle(bundleId);
+    if (!mounted) return success;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? '组合包已加入购物车' : '组合包加入失败'),
+        action: success
+            ? SnackBarAction(label: '查看', onPressed: () => context.go('/cart'))
+            : null,
+      ),
+    );
+    return success;
+  }
 }
 
 class _BooksHeader extends StatelessWidget {
@@ -246,6 +296,7 @@ class _BooksHeader extends StatelessWidget {
     required this.session,
     required this.searchController,
     required this.onSearch,
+    required this.onRandomBook,
     required this.onCart,
     required this.onAdmin,
     required this.onProfile,
@@ -256,6 +307,7 @@ class _BooksHeader extends StatelessWidget {
   final AuthSession? session;
   final TextEditingController searchController;
   final VoidCallback onSearch;
+  final VoidCallback? onRandomBook;
   final VoidCallback onCart;
   final VoidCallback onAdmin;
   final VoidCallback onProfile;
@@ -282,10 +334,19 @@ class _BooksHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                TextButton.icon(
-                  onPressed: onCart,
-                  icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                  label: const Text('购物车'),
+                Tooltip(
+                  message: '随机一本图书',
+                  child: IconButton(
+                    onPressed: onRandomBook,
+                    icon: const Icon(Icons.casino_outlined),
+                  ),
+                ),
+                Tooltip(
+                  message: '购物车',
+                  child: IconButton(
+                    onPressed: onCart,
+                    icon: const Icon(Icons.shopping_bag_outlined),
+                  ),
                 ),
                 if (isAdmin) ...[
                   TextButton.icon(
@@ -297,6 +358,22 @@ class _BooksHeader extends StatelessWidget {
                     label: const Text('管理台'),
                   ),
                 ],
+              ],
+              if (compact) ...[
+                Tooltip(
+                  message: '随机一本图书',
+                  child: IconButton(
+                    onPressed: onRandomBook,
+                    icon: const Icon(Icons.casino_outlined),
+                  ),
+                ),
+                Tooltip(
+                  message: '购物车',
+                  child: IconButton(
+                    onPressed: onCart,
+                    icon: const Icon(Icons.shopping_bag_outlined),
+                  ),
+                ),
               ],
               if (isAuthenticated)
                 Tooltip(
@@ -654,6 +731,9 @@ class _BookCard extends StatelessWidget {
 class _BookDetailContent extends StatelessWidget {
   const _BookDetailContent({
     required this.book,
+    required this.bundles,
+    this.addingBundleId,
+    required this.onAddBundle,
     required this.reviews,
     required this.loadedReviews,
     required this.cachedReviewSummary,
@@ -665,12 +745,15 @@ class _BookDetailContent extends StatelessWidget {
   });
 
   final dynamic book;
+  final List<BookBundle> bundles;
+  final int? addingBundleId;
   final AsyncValue<dynamic> reviews;
   final List<BookReview> loadedReviews;
   final BookReviewSummary? cachedReviewSummary;
   final String? imageUrl;
   final bool adding;
   final Future<void> Function()? onAdd;
+  final Future<bool> Function(int bundleId) onAddBundle;
   final VoidCallback onLoadMoreReviews;
   final VoidCallback onRetryReviews;
 
@@ -719,6 +802,14 @@ class _BookDetailContent extends StatelessWidget {
                         );
                 },
               ),
+              if (bundles.isNotEmpty) ...[
+                const SizedBox(height: 32),
+                BookBundleOffers(
+                  bundles: bundles,
+                  addingBundleId: addingBundleId,
+                  onAddBundle: (bundleId) => onAddBundle(bundleId),
+                ),
+              ],
               const SizedBox(height: 52),
               const Text(
                 'READERS  ·  读者评价',
@@ -903,12 +994,35 @@ class _BookSummary extends StatelessWidget {
         ),
         if ((book.description as String?)?.isNotEmpty == true) ...[
           const SizedBox(height: 28),
-          Text(
-            book.description as String,
-            style: const TextStyle(
-              color: BookStoreColors.muted,
-              fontSize: 15,
-              height: 1.8,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAF8F4),
+              border: Border.all(color: BookStoreColors.line),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '内容简介',
+                  style: TextStyle(
+                    color: BookStoreColors.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  book.description as String,
+                  style: const TextStyle(
+                    color: BookStoreColors.muted,
+                    fontSize: 15,
+                    height: 1.8,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -10,6 +10,7 @@ class UserProfile {
     this.avatarUrl,
     this.createTime,
     this.updateTime,
+    this.securityQuestionsConfigured = false,
   });
 
   factory UserProfile.fromJson(dynamic json) {
@@ -27,6 +28,7 @@ class UserProfile {
       avatarUrl: json['avatarUrl'] as String?,
       createTime: DateTime.tryParse(json['createTime'] as String? ?? ''),
       updateTime: DateTime.tryParse(json['updateTime'] as String? ?? ''),
+      securityQuestionsConfigured: json['securityQuestionsConfigured'] as bool? ?? false,
     );
   }
 
@@ -40,8 +42,14 @@ class UserProfile {
   final String? avatarUrl;
   final DateTime? createTime;
   final DateTime? updateTime;
+  final bool securityQuestionsConfigured;
 
   String get displayName => nickname.trim().isEmpty ? username : nickname;
   bool get isAdmin => role == 'ADMIN';
   bool get isEnabled => status == 1;
 }
+
+
+
+
+

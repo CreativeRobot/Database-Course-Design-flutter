@@ -35,6 +35,18 @@ void main() {
     expect(controller.state.status, RecommendationStatus.failure);
     expect(controller.state.errorMessage, '服务暂不可用');
   });
+
+  test('loads another recommendation page and appends it to the existing list', () async {
+    final source = _PagedRecommendationDataSource();
+    final controller = RecommendationController(source);
+
+    await controller.load(limit: 2);
+    await controller.loadMore();
+
+    expect(source.pages, [1, 2]);
+    expect(controller.state.home?.books.map((book) => book.id), [1, 2, 3]);
+    expect(controller.state.home?.hasMore, isFalse);
+  });
 }
 
 class _FakeRecommendationDataSource implements RecommendationDataSource {
@@ -43,9 +55,47 @@ class _FakeRecommendationDataSource implements RecommendationDataSource {
   final List<Object> _responses;
 
   @override
-  Future<RecommendationHome> fetchHome({int limit = 12}) async {
+  Future<RecommendationHome> fetchHome({int limit = 12, int page = 1}) async {
     final response = _responses.removeAt(0);
     if (response is Exception) throw response;
     return response as RecommendationHome;
+  }
+}
+
+class _PagedRecommendationDataSource implements RecommendationDataSource {
+  final pages = <int>[];
+
+  @override
+  Future<RecommendationHome> fetchHome({int limit = 12, int page = 1}) async {
+    pages.add(page);
+    if (page == 1) {
+      return const RecommendationHome(
+        source: 'POPULAR',
+        books: [
+          RecommendationBook(
+            id: 1, isbn: 'isbn-1', title: '一', publisherId: 1,
+            publisherName: '出版社', originalPrice: 10, salePrice: 8,
+            stock: 1, status: 'ON_SALE', reason: '热门畅销书',
+          ),
+          RecommendationBook(
+            id: 2, isbn: 'isbn-2', title: '二', publisherId: 1,
+            publisherName: '出版社', originalPrice: 10, salePrice: 8,
+            stock: 1, status: 'ON_SALE', reason: '热门畅销书',
+          ),
+        ],
+        page: 1, size: 2, hasMore: true,
+      );
+    }
+    return const RecommendationHome(
+      source: 'POPULAR',
+      books: [
+        RecommendationBook(
+          id: 3, isbn: 'isbn-3', title: '三', publisherId: 1,
+          publisherName: '出版社', originalPrice: 10, salePrice: 8,
+          stock: 1, status: 'ON_SALE', reason: '热门畅销书',
+        ),
+      ],
+      page: 2, size: 2, hasMore: false,
+    );
   }
 }

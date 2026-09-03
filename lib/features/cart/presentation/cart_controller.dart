@@ -83,6 +83,34 @@ class CartController extends StateNotifier<CartState> {
     );
   }
 
+  Future<bool> addBundle(int bundleId) async {
+    if (state.isBusy) {
+      return false;
+    }
+    state = state.copyWith(busyAll: true, clearError: true);
+    try {
+      final cart = await _repository.addBundle(bundleId);
+      state = state.copyWith(
+        status: CartStatus.ready,
+        cart: cart,
+        busyAll: false,
+        clearError: true,
+      );
+      return true;
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        busyAll: false,
+        errorMessage: await _messageFor(error),
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        busyAll: false,
+        errorMessage: '加入组合包失败，请稍后再试',
+      );
+      return false;
+    }
+  }
   Future<bool> updateQuantity(CartItem item, int quantity) {
     if (quantity < 1 || quantity > item.stock || quantity > 999) {
       return Future.value(false);

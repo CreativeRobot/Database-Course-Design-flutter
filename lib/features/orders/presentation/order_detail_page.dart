@@ -13,6 +13,7 @@ import '../../refunds/data/refund_models.dart';
 import '../../refunds/presentation/refunds_providers.dart';
 import '../data/order_models.dart';
 import 'orders_controller.dart';
+import 'order_bundle_history.dart';
 
 class OrderDetailPage extends ConsumerStatefulWidget {
   const OrderDetailPage({required this.orderId, super.key});
@@ -426,6 +427,13 @@ class _DetailContent extends StatelessWidget {
             ],
           ),
         ),
+        if (order.bundles.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _Section(
+            title: '组合包优惠',
+            child: OrderBundleHistory(bundles: order.bundles),
+          ),
+        ],
         const SizedBox(height: 16),
         _Section(
           title: '收货信息',
@@ -928,3 +936,6 @@ class _RefundApplicationDialogState extends State<_RefundApplicationDialog> {
     );
   }
 }
+
+
+

@@ -9,9 +9,14 @@ import 'book_catalog_grid.dart';
 import 'search_results_controller.dart';
 
 class SearchResultsPage extends ConsumerStatefulWidget {
-  const SearchResultsPage({required this.initialKeyword, super.key});
+  const SearchResultsPage({
+    required this.initialKeyword,
+    this.initialCategoryId,
+    super.key,
+  });
 
   final String initialKeyword;
+  final int? initialCategoryId;
 
   @override
   ConsumerState<SearchResultsPage> createState() => _SearchResultsPageState();
@@ -19,14 +24,31 @@ class SearchResultsPage extends ConsumerStatefulWidget {
 
 class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
   late final TextEditingController _searchController;
+  bool _started = false;
+  int? _routeCategoryId;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController(text: widget.initialKeyword);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _routeCategoryId = int.tryParse(
+      GoRouterState.of(context).uri.queryParameters['categoryId'] ?? '',
+    );
     Future<void>.microtask(
       () => ref
-          .read(searchResultsControllerProvider(widget.initialKeyword).notifier)
+          .read(
+            searchResultsControllerProvider((
+              keyword: widget.initialKeyword,
+              categoryId: widget.initialCategoryId ?? _routeCategoryId,
+            )).notifier,
+          )
           .loadInitial(),
     );
   }
@@ -37,13 +59,20 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
     super.dispose();
   }
 
-  SearchResultsController get _controller =>
-      ref.read(searchResultsControllerProvider(widget.initialKeyword).notifier);
+  SearchResultsController get _controller => ref.read(
+    searchResultsControllerProvider((
+      keyword: widget.initialKeyword,
+      categoryId: widget.initialCategoryId ?? _routeCategoryId,
+    )).notifier,
+  );
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(
-      searchResultsControllerProvider(widget.initialKeyword),
+      searchResultsControllerProvider((
+        keyword: widget.initialKeyword,
+        categoryId: widget.initialCategoryId ?? _routeCategoryId,
+      )),
     );
     final baseUrl = ref.watch(appConfigProvider).baseUrl;
     return Scaffold(

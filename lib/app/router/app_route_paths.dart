@@ -1,8 +1,10 @@
 abstract final class AppRoutePaths {
   static const login = '/login';
   static const register = '/register';
+  static const forgotPassword = '/forgot-password';
   static const books = '/books';
   static const search = '/search';
+  static const categories = '/categories';
   static const cart = '/cart';
   static const checkout = '/checkout';
   static const orders = '/orders';
@@ -12,7 +14,7 @@ abstract final class AppRoutePaths {
   static const admin = '/admin';
 
   static bool isAuthenticationRoute(String location) =>
-      location == login || location == register;
+      location == login || location == register || location == forgotPassword;
 
   static bool isAdminRoute(String location) =>
       location == admin || location.startsWith('$admin/');
@@ -26,3 +28,4 @@ abstract final class AppRoutePaths {
       location == reviews ||
       location == profile;
 }
+

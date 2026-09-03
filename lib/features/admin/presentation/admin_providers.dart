@@ -7,6 +7,8 @@ import '../../orders/data/order_models.dart';
 import '../../reviews/data/review_models.dart';
 import '../data/admin_models.dart';
 import '../data/admin_repository.dart';
+import '../../cart/data/bundle_models.dart';
+import '../../cart/data/bundle_repository.dart';
 import 'admin_book_filter.dart';
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
@@ -20,6 +22,13 @@ final adminStatisticsProvider = FutureProvider.autoDispose<AdminStatistics>((
 });
 
 final adminBookFilterProvider = StateProvider<AdminBookFilter?>((ref) => null);
+final bundleRepositoryProvider = Provider<BundleRepository>((ref) {
+  return BundleRepository(ref.watch(apiClientProvider));
+});
+
+final adminBundlesProvider = FutureProvider.autoDispose<List<BookBundle>>((ref) {
+  return ref.watch(bundleRepositoryProvider).adminList();
+});
 
 typedef AdminUserFilter = ({
   String keyword,

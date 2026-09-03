@@ -12,6 +12,7 @@ import 'admin_orders_reviews_pages.dart';
 import 'admin_overview_page.dart';
 import 'admin_users_page.dart';
 import 'admin_refunds_page.dart';
+import 'admin_bundles_page.dart';
 
 enum AdminSection {
   overview('overview', '经营概览', Icons.dashboard_outlined),
@@ -23,7 +24,8 @@ enum AdminSection {
   reviews('reviews', '评价审核', Icons.rate_review_outlined),
   inventory('inventory', '库存流水', Icons.inventory_2_outlined),
   users('users', '用户管理', Icons.people_outline),
-  refunds('refunds', '售后审核', Icons.assignment_return_outlined);
+  refunds('refunds', '售后审核', Icons.assignment_return_outlined),
+  bundles('bundles', '组合包管理', Icons.collections_bookmark_outlined);
 
   const AdminSection(this.path, this.label, this.icon);
   final String path;
@@ -48,6 +50,7 @@ class AdminPage extends ConsumerWidget {
       AdminSection.inventory => const AdminInventoryPage(),
       AdminSection.users => const AdminUsersPage(),
       AdminSection.refunds => const AdminRefundsPage(),
+      AdminSection.bundles => const AdminBundlesPage(),
     };
     return Scaffold(
       backgroundColor: AdminColors.canvas,

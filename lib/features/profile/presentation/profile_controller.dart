@@ -4,6 +4,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../data/models/profile/user_address.dart';
 import '../../../data/models/profile/user_profile.dart';
+import '../../../data/models/auth/security_question.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/profile_repository.dart';
 
@@ -161,6 +162,21 @@ class ProfileController extends StateNotifier<ProfileState> {
     }
   }
 
+  Future<bool> updateSecurityQuestions({required List<SecurityAnswer> questions}) async {
+    state = state.copyWith(submitting: true, clearError: true);
+    try {
+      await _repository.updateSecurityQuestions(questions: questions);
+      await load();
+      state = state.copyWith(submitting: false, clearError: true);
+      return true;
+    } on ApiException catch (error) {
+      state = state.copyWith(submitting: false, errorMessage: await _messageFor(error));
+      return false;
+    } catch (_) {
+      state = state.copyWith(submitting: false, errorMessage: '保存密保问题失败，请稍后再试');
+      return false;
+    }
+  }
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -301,3 +317,4 @@ final profileControllerProvider =
     authController: ref.watch(authControllerProvider.notifier),
   );
 });
+

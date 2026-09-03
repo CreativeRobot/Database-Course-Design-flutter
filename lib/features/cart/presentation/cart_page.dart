@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/book_presale.dart';
 import '../data/cart_models.dart';
+import '../data/bundle_models.dart';
 import 'cart_controller.dart';
 import 'commerce_widgets.dart';
 
@@ -84,6 +85,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                                 cart.selectedItems.length,
                               ),
                             ),
+                            if (cart.eligibleBundles.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              CartBundleSuggestions(
+                                bundles: cart.eligibleBundles,
+                              ),
+                            ],
                             const SizedBox(height: 14),
                             LayoutBuilder(
                               builder: (context, constraints) {
@@ -516,7 +523,18 @@ class _CartSummary extends StatelessWidget {
           const SizedBox(height: 22),
           _SummaryLine(label: '已选数量', value: '${cart.selectedQuantity} 件'),
           const SizedBox(height: 12),
-          _SummaryLine(label: '商品金额', value: money(cart.selectedAmount)),
+          _SummaryLine(
+            label: '商品金额',
+            value: money(cart.regularAmount ?? cart.selectedAmount),
+          ),
+          if (cart.bundleDiscountAmount > 0) ...[
+            const SizedBox(height: 10),
+            _SummaryLine(
+              label: '组合包优惠',
+              value: '-${money(cart.bundleDiscountAmount)}',
+              valueColor: const Color(0xFF86EFAC),
+            ),
+          ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 18),
             child: Divider(color: Colors.white24, height: 1),
@@ -527,7 +545,7 @@ class _CartSummary extends StatelessWidget {
               const Text('合计', style: TextStyle(color: Colors.white70)),
               const Spacer(),
               Text(
-                money(cart.selectedAmount),
+                money(cart.checkoutAmount),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 25,
@@ -571,11 +589,118 @@ class _CartSummary extends StatelessWidget {
   }
 }
 
+class CartBundleSuggestions extends StatelessWidget {
+  const CartBundleSuggestions({required this.bundles, super.key});
+
+  final List<CartBundle> bundles;
+
+  @override
+  Widget build(BuildContext context) {
+    if (bundles.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '组合包推荐',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            '当前已选商品可以组成以下套装，最终价格以下单时后端计算为准。',
+            style: TextStyle(color: CommerceColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 13),
+          ...bundles.map(
+            (bundle) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    bundle.applied
+                        ? Icons.check_circle_rounded
+                        : Icons.collections_bookmark_outlined,
+                    color: bundle.applied
+                        ? CommerceColors.success
+                        : CommerceColors.ink,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bundle.name,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          bundle.items.map((item) => item.title).join('、'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: CommerceColors.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        money(bundle.bundlePrice),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        '省 ${money(bundle.savings)}',
+                        style: const TextStyle(
+                          color: CommerceColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (bundle.applied)
+                        const Text(
+                          '已应用',
+                          style: TextStyle(
+                            color: CommerceColors.success,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({required this.label, required this.value});
+  const _SummaryLine({
+    required this.label,
+    required this.value,
+    this.valueColor = Colors.white,
+  });
 
   final String label;
   final String value;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -586,7 +711,7 @@ class _SummaryLine extends StatelessWidget {
           style: const TextStyle(color: Colors.white60, fontSize: 13),
         ),
         const Spacer(),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        Text(value, style: TextStyle(color: valueColor, fontSize: 13)),
       ],
     );
   }

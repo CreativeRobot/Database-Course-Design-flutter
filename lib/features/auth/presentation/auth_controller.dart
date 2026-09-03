@@ -10,6 +10,7 @@ import '../../../core/storage/token_storage.dart';
 import '../../../data/models/auth/auth_session.dart';
 import '../../../data/models/auth/captcha.dart';
 import '../data/auth_repository.dart';
+import '../../../data/models/auth/security_question.dart';
 
 enum AuthStatus { checking, unauthenticated, loading, authenticated }
 
@@ -123,6 +124,7 @@ class AuthController extends StateNotifier<AuthState> {
     String? phone,
     required String captchaId,
     required String captchaCode,
+    required List<SecurityAnswer> securityQuestions,
   }) {
     return _runAuth(() {
       return _repository.register(
@@ -133,6 +135,7 @@ class AuthController extends StateNotifier<AuthState> {
         phone: phone,
         captchaId: captchaId,
         captchaCode: captchaCode,
+        securityQuestions: securityQuestions,
       );
     });
   }
