@@ -164,7 +164,7 @@ final adminCommunityPostsProvider = FutureProvider.autoDispose
     });
 
 typedef AdminInventoryFilter = ({
-  int? bookId,
+  String bookName,
   int? orderId,
   String? type,
   String? startTime,
@@ -177,7 +177,7 @@ final adminInventoryProvider = FutureProvider.autoDispose
       return ref
           .watch(adminRepositoryProvider)
           .inventoryLogs(
-            bookId: filter.bookId,
+            bookName: filter.bookName,
             orderId: filter.orderId,
             type: filter.type,
             startTime: filter.startTime,
@@ -192,4 +192,15 @@ final adminRefundsProvider = FutureProvider.autoDispose
       return ref
           .watch(adminRepositoryProvider)
           .refunds(status: filter.status, type: filter.type, page: filter.page);
+    });
+
+
+typedef AdminBundleRefundFilter = ({String? status, String? type, int page});
+final adminBundleRefundsProvider = FutureProvider.autoDispose
+    .family<PageResponse<AdminBundleRefundRequest>, AdminBundleRefundFilter>((ref, filter) {
+      return ref.watch(adminRepositoryProvider).bundleRefunds(
+        status: filter.status,
+        type: filter.type,
+        page: filter.page,
+      );
     });

@@ -54,3 +54,7 @@ build/
 .dart-appdata/
 .dart_appdata/
 .dart_localappdata/
+
+# Runtime scratch and planning artifacts
+.runtime-temp/
+.planning/

@@ -263,6 +263,44 @@ class AdminRepository {
     },
     parser: AdminRefundRequest.fromJson,
   )).data;
+  Future<PageResponse<AdminBundleRefundRequest>> bundleRefunds({
+    String? status,
+    String? type,
+    int page = 1,
+    int size = 20,
+  }) async => (await _api.get(
+    ApiPaths.adminBundleRefunds,
+    queryParameters: {
+      if (status != null) 'status': status,
+      if (type != null) 'type': type,
+      'page': page,
+      'size': size,
+    },
+    parser: (v) => PageResponse.fromJson(
+      v,
+      itemParser: AdminBundleRefundRequest.fromJson,
+    ),
+  )).data;
+
+  Future<AdminBundleRefundRequest> bundleRefund(int id) async =>
+      (await _api.get(
+        ApiPaths.adminBundleRefund(id),
+        parser: AdminBundleRefundRequest.fromJson,
+      )).data;
+
+  Future<AdminBundleRefundRequest> reviewBundleRefund(
+    int id, {
+    required bool approved,
+    String? remark,
+  }) async => (await _api.put(
+    ApiPaths.adminBundleRefundReview(id),
+    data: {
+      'approved': approved,
+      if (remark != null && remark.trim().isNotEmpty) 'remark': remark.trim(),
+    },
+    parser: AdminBundleRefundRequest.fromJson,
+  )).data;
+
   Future<PageResponse<UserReview>> reviews({
     int? bookId,
     int? userId,
@@ -312,7 +350,7 @@ class AdminRepository {
       )).data;
 
   Future<PageResponse<InventoryLog>> inventoryLogs({
-    int? bookId,
+    String? bookName,
     int? orderId,
     String? type,
     String? startTime,
@@ -322,7 +360,8 @@ class AdminRepository {
   }) async => (await _api.get(
     ApiPaths.adminInventoryLogs,
     queryParameters: {
-      if (bookId != null) 'bookId': bookId,
+      if (bookName != null && bookName.trim().isNotEmpty)
+        'bookName': bookName.trim(),
       if (orderId != null) 'orderId': orderId,
       if (type != null) 'changeType': type,
       if (startTime != null && startTime.isNotEmpty) 'startTime': startTime,

@@ -101,5 +101,9 @@ abstract final class ApiPaths {
   static const adminRefunds = '$admin/refunds';
   static String adminRefund(int id) => '$adminRefunds/$id';
   static String adminRefundReview(int id) => '${adminRefund(id)}/review';
+  static const adminBundleRefunds = '$admin/bundle-refunds';
+  static String adminBundleRefund(int id) => '$adminBundleRefunds/$id';
+  static String adminBundleRefundReview(int id) =>
+      '${adminBundleRefund(id)}/review';
   static const adminImageUpload = '$admin/uploads/images';
 }

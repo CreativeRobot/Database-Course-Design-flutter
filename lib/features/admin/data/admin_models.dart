@@ -405,3 +405,108 @@ class AdminRefundRequest {
     _ => '待审核',
   };
 }
+
+
+class AdminBundleRefundRequestItem {
+  const AdminBundleRefundRequestItem({
+    required this.orderItemId,
+    required this.bookId,
+    required this.bookTitle,
+    required this.isbn,
+    required this.salePrice,
+    required this.allocatedDiscount,
+    required this.quantity,
+    required this.amount,
+  });
+
+  factory AdminBundleRefundRequestItem.fromJson(dynamic json) {
+    final m = Map<String, dynamic>.from(json as Map);
+    return AdminBundleRefundRequestItem(
+      orderItemId: _int(m['orderItemId']),
+      bookId: _int(m['bookId']),
+      bookTitle: m['bookTitle'] as String? ?? '',
+      isbn: m['isbn'] as String? ?? '',
+      salePrice: _double(m['salePrice']),
+      allocatedDiscount: _double(m['allocatedDiscount']),
+      quantity: _int(m['quantity']),
+      amount: _double(m['amount']),
+    );
+  }
+
+  final int orderItemId;
+  final int bookId;
+  final String bookTitle;
+  final String isbn;
+  final double salePrice;
+  final double allocatedDiscount;
+  final int quantity;
+  final double amount;
+}
+
+class AdminBundleRefundRequest {
+  const AdminBundleRefundRequest({
+    required this.id,
+    required this.refundNo,
+    required this.orderId,
+    required this.orderNo,
+    required this.bundleApplicationId,
+    required this.bundleId,
+    required this.bundleName,
+    required this.type,
+    required this.status,
+    required this.amount,
+    required this.reason,
+    required this.reviewRemark,
+    required this.items,
+    required this.createTime,
+    this.reviewerId,
+    this.reviewedTime,
+  });
+
+  factory AdminBundleRefundRequest.fromJson(dynamic json) {
+    final m = Map<String, dynamic>.from(json as Map);
+    return AdminBundleRefundRequest(
+      id: _int(m['id']),
+      refundNo: m['refundNo'] as String? ?? '',
+      orderId: _int(m['orderId']),
+      orderNo: m['orderNo'] as String? ?? '',
+      bundleApplicationId: _int(m['bundleApplicationId']),
+      bundleId: _int(m['bundleId']),
+      bundleName: m['bundleName'] as String? ?? '',
+      type: m['type'] as String? ?? '',
+      status: m['status'] as String? ?? 'PENDING',
+      amount: _double(m['amount']),
+      reason: m['reason'] as String? ?? '',
+      reviewRemark: m['reviewRemark'] as String? ?? '',
+      items: _list(m['items'], AdminBundleRefundRequestItem.fromJson),
+      createTime: m['createTime'] as String? ?? '',
+      reviewerId: (m['reviewerId'] as num?)?.toInt(),
+      reviewedTime: m['reviewedTime'] as String?,
+    );
+  }
+
+  final int id;
+  final String refundNo;
+  final int orderId;
+  final String orderNo;
+  final int bundleApplicationId;
+  final int bundleId;
+  final String bundleName;
+  final String type;
+  final String status;
+  final double amount;
+  final String reason;
+  final String reviewRemark;
+  final List<AdminBundleRefundRequestItem> items;
+  final String createTime;
+  final int? reviewerId;
+  final String? reviewedTime;
+
+  bool get pending => status == 'PENDING';
+  String get typeLabel => type == 'RETURN_REFUND' ? '退货退款' : '仅退款';
+  String get statusLabel => switch (status) {
+    'APPROVED' => '已同意',
+    'REJECTED' => '已拒绝',
+    _ => '待审核',
+  };
+}

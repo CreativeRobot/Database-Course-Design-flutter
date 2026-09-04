@@ -303,10 +303,10 @@ class _OrderDetailDialog extends StatelessWidget {
                 ),
                 trailing: Text(money(item.subtotal)),
               ),
-             if (order.bundles.isNotEmpty) ...[
-               const Divider(height: 28),
-               OrderBundleHistory(bundles: order.bundles),
-             ],
+            if (order.bundles.isNotEmpty) ...[
+              const Divider(height: 28),
+              OrderBundleHistory(bundles: order.bundles),
+            ],
           ],
         ),
       ),
@@ -525,14 +525,14 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
   final orderSearch = TextEditingController();
   final startSearch = TextEditingController();
   final endSearch = TextEditingController();
-  int? bookId;
+  String bookName = '';
   int? orderId;
   String? startTime;
   String? endTime;
   String? type;
   int page = 1;
   AdminInventoryFilter get filter => (
-    bookId: bookId,
+    bookName: bookName,
     orderId: orderId,
     type: type,
     startTime: startTime,
@@ -567,7 +567,7 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
                 ),
               ),
-              _filterField(bookSearch, '图书 ID', 130),
+              _filterField(bookSearch, '图书名称', 180),
               _filterField(orderSearch, '订单 ID', 130),
               _filterField(startSearch, '起始时间 ISO-8601', 210),
               _filterField(endSearch, '结束时间 ISO-8601', 210),
@@ -647,7 +647,7 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
   );
 
   void _apply() => setState(() {
-    bookId = int.tryParse(bookSearch.text.trim());
+    bookName = bookSearch.text.trim();
     orderId = int.tryParse(orderSearch.text.trim());
     startTime = startSearch.text.trim();
     endTime = endSearch.text.trim();
@@ -804,6 +804,3 @@ String _inventoryLabel(String type) => switch (type) {
   'MANUAL_ADJUSTMENT' => '手动调整',
   _ => type,
 };
-
-
-

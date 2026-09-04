@@ -1,3 +1,5 @@
+import '../../refunds/data/refund_models.dart';
+
 class BookOrder {
   const BookOrder({
     required this.id,
@@ -95,6 +97,10 @@ class OrderLine {
     required this.subtotal,
     this.discountAmount = 0,
     this.paidSubtotal = 0,
+    this.bundleCoveredQuantity = 0,
+    this.standaloneRefundableQuantity = 0,
+    this.approvedStandaloneQuantity = 0,
+    this.pendingStandaloneQuantity = 0,
     this.preSale = false,
     this.preSaleReleaseTime,
   });
@@ -113,6 +119,13 @@ class OrderLine {
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0,
       paidSubtotal: (json['paidSubtotal'] as num?)?.toDouble() ?? 0,
+      bundleCoveredQuantity: (json['bundleCoveredQuantity'] as num?)?.toInt() ?? 0,
+      standaloneRefundableQuantity:
+          (json['standaloneRefundableQuantity'] as num?)?.toInt() ?? 0,
+      approvedStandaloneQuantity:
+          (json['approvedStandaloneQuantity'] as num?)?.toInt() ?? 0,
+      pendingStandaloneQuantity:
+          (json['pendingStandaloneQuantity'] as num?)?.toInt() ?? 0,
       preSale: json['preSale'] as bool? ?? false,
       preSaleReleaseTime: _date(json['preSaleReleaseTime']),
     );
@@ -127,6 +140,10 @@ class OrderLine {
   final double subtotal;
   final double discountAmount;
   final double paidSubtotal;
+  final int bundleCoveredQuantity;
+  final int standaloneRefundableQuantity;
+  final int approvedStandaloneQuantity;
+  final int pendingStandaloneQuantity;
   final bool preSale;
   final DateTime? preSaleReleaseTime;
 }
@@ -140,6 +157,10 @@ class OrderBundleApplication {
     required this.regularAmount,
     required this.discountAmount,
     required this.items,
+    this.bundleRefundStatus,
+    this.bundleRefundable = false,
+    this.bundleRefundUnavailableReason,
+    this.bundleRefundAmount = 0,
   });
 
   factory OrderBundleApplication.fromJson(dynamic json) {
@@ -154,6 +175,11 @@ class OrderBundleApplication {
       bundlePrice: (json['bundlePrice'] as num?)?.toDouble() ?? 0,
       regularAmount: (json['regularAmount'] as num?)?.toDouble() ?? 0,
       discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0,
+      bundleRefundStatus: _refundStatus(json['bundleRefundStatus']),
+      bundleRefundable: json['bundleRefundable'] as bool? ?? false,
+      bundleRefundUnavailableReason:
+          json['bundleRefundUnavailableReason'] as String?,
+      bundleRefundAmount: (json['bundleRefundAmount'] as num?)?.toDouble() ?? 0,
       items: rawItems is List
           ? rawItems
               .map(OrderBundleApplicationItem.fromJson)
@@ -168,6 +194,10 @@ class OrderBundleApplication {
   final double bundlePrice;
   final double regularAmount;
   final double discountAmount;
+  final RefundStatus? bundleRefundStatus;
+  final bool bundleRefundable;
+  final String? bundleRefundUnavailableReason;
+  final double bundleRefundAmount;
   final List<OrderBundleApplicationItem> items;
 }
 
@@ -251,3 +281,5 @@ class PaymentResult {
 DateTime? _date(dynamic value) {
   return value is String ? DateTime.tryParse(value) : null;
 }
+RefundStatus? _refundStatus(dynamic value) =>
+    value is String ? RefundStatus.fromCode(value) : null;
